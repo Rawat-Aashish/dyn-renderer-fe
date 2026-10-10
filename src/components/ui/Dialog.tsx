@@ -32,11 +32,11 @@ export function Dialog({ open, title, onClose, children }: DialogProps) {
         // Browsers let a repeated Escape close the dialog even when cancel was prevented.
         else if (open) ref.current?.showModal()
       }}
-      className="m-auto w-full max-w-sm rounded-lg border border-gray-200 bg-white p-6 shadow-sm backdrop:bg-gray-900/40"
+      className="m-auto w-full max-w-sm rounded-xl border-t-4 border-brand-600 bg-white p-6 shadow-lg backdrop:bg-brand-950/50"
     >
       {open && (
         <>
-          <h2 id={titleId} className="text-lg font-semibold tracking-tight text-gray-900">
+          <h2 id={titleId} className="text-lg font-semibold tracking-tight text-slate-900">
             {title}
           </h2>
           {children}

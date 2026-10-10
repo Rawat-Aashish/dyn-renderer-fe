@@ -16,6 +16,14 @@ export class ApiError extends Error {
   }
 }
 
+export function messageOf(error: unknown): string {
+  return error instanceof ApiError ? error.message : GENERIC_ERROR
+}
+
+export function fieldErrorsOf(error: unknown): Record<string, string> {
+  return (error instanceof ApiError && error.errors) || {}
+}
+
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
   body?: unknown

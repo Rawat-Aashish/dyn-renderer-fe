@@ -4,3 +4,11 @@ export interface ApiResponse<T> {
   data: T | null
   errors?: Record<string, string>
 }
+
+export interface Page<T> {
+  items: T[]
+  page: number
+  size: number
+  totalItems: number
+  totalPages: number
+}

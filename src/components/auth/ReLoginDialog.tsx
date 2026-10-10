@@ -9,7 +9,7 @@ export function ReLoginDialog() {
 
   return (
     <Dialog open={reauthRequired} title="Your session has expired">
-      <p className="mt-1 mb-4 text-sm leading-relaxed text-gray-600">
+      <p className="mt-1 mb-4 text-sm leading-relaxed text-slate-600">
         Sign in again to continue. Nothing on this page has been lost.
       </p>
       <LoginForm defaultEmail={email} />
