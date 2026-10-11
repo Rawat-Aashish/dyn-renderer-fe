@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo, useState } from 'react'
+import { Trash2 } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { formKey } from '../../hooks/useFormDetail'
 import { TYPE_LABELS } from '../../lib/component-meta'
 import { deleteComponent } from '../../services/component.service'
@@ -30,15 +31,9 @@ export function PropertiesPanel({ formId, component, components, sections, condi
   const select = useBuilderStore((state) => state.select)
   const [tab, setTab] = useState<Tab>('settings')
   const [deleting, setDeleting] = useState(false)
-  const [savedFlash, setSavedFlash] = useState(false)
-
-  useEffect(() => {
-    if (!savedFlash) return
-    const timer = setTimeout(() => setSavedFlash(false), 2000)
-    return () => clearTimeout(timer)
-  }, [savedFlash])
 
   const remove = useMutation({
+    meta: { toast: 'Field deleted' },
     mutationFn: () => deleteComponent(formId, component.id),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: formKey(formId) })
@@ -77,18 +72,12 @@ export function PropertiesPanel({ formId, component, components, sections, condi
           <Badge tone="blue">{TYPE_LABELS[component.componentType]}</Badge>
           <h2 className="mt-1.5 truncate text-base font-semibold text-slate-900">{component.fieldLabel}</h2>
         </div>
-        <div className="flex items-center gap-2">
-          {savedFlash && (
-            <span role="status" className="text-xs font-medium text-emerald-700">
-              Saved
-            </span>
-          )}
-          {!readOnly && (
-            <Button variant="secondary" onClick={() => setDeleting(true)}>
-              Delete
-            </Button>
-          )}
-        </div>
+        {!readOnly && (
+          <Button variant="secondary" onClick={() => setDeleting(true)}>
+            <Trash2 aria-hidden="true" className="size-4" />
+            Delete
+          </Button>
+        )}
       </div>
 
       <div role="tablist" aria-label="Field properties" className="flex gap-1 border-y border-slate-200 px-3">
@@ -121,7 +110,6 @@ export function PropertiesPanel({ formId, component, components, sections, condi
             readOnly={readOnly}
             controlled={controlled}
             codeLocked={codeLocked}
-            onSaved={() => setSavedFlash(true)}
           />
         </div>
         <div role="tabpanel" id="tabpanel-validation" aria-labelledby="tab-validation" hidden={tab !== 'validation'}>

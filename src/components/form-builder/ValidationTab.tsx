@@ -67,10 +67,15 @@ function RuleRow({ component, rule, formId, readOnly }: { component: FormCompone
   const refresh = () => queryClient.invalidateQueries({ queryKey: formKey(formId) })
 
   const save = useMutation({
+    meta: { toast: 'Rule saved' },
     mutationFn: () => updateRule(component.id, rule.id, { ruleValue: value, errorMessage: message || undefined }),
     onSuccess: refresh,
   })
-  const remove = useMutation({ mutationFn: () => deleteRule(component.id, rule.id), onSuccess: refresh })
+  const remove = useMutation({
+    meta: { toast: 'Rule deleted' },
+    mutationFn: () => deleteRule(component.id, rule.id),
+    onSuccess: refresh,
+  })
 
   const failed = save.error ?? remove.error
   const errors = fieldErrorsOf(save.error)
@@ -120,6 +125,7 @@ function AddRule({ component, formId, remaining }: { component: FormComponent; f
   const current = remaining.includes(ruleType) ? ruleType : remaining[0]
 
   const add = useMutation({
+    meta: { toast: 'Rule added' },
     mutationFn: () => addRule(component.id, { ruleType: current, ruleValue: value, errorMessage: message || undefined }),
     onSuccess: async () => {
       setValue('')

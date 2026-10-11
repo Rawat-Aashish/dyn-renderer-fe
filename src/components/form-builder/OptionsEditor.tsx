@@ -1,3 +1,4 @@
+import { ArrowDown, ArrowUp, Plus, X } from 'lucide-react'
 import type { Option } from '../../types/form'
 import { Button } from '../ui/Button'
 import { controlClass } from '../ui/control-class'
@@ -55,7 +56,7 @@ export function OptionsEditor({ options, onChange }: OptionsEditorProps) {
               onClick={() => move(index, -1)}
               className="rounded p-1 text-slate-500 hover:bg-slate-100 disabled:opacity-30"
             >
-              ↑
+              <ArrowUp aria-hidden="true" className="size-4" />
             </button>
             <button
               type="button"
@@ -64,7 +65,7 @@ export function OptionsEditor({ options, onChange }: OptionsEditorProps) {
               onClick={() => move(index, 1)}
               className="rounded p-1 text-slate-500 hover:bg-slate-100 disabled:opacity-30"
             >
-              ↓
+              <ArrowDown aria-hidden="true" className="size-4" />
             </button>
             <button
               type="button"
@@ -72,12 +73,13 @@ export function OptionsEditor({ options, onChange }: OptionsEditorProps) {
               onClick={() => onChange(options.filter((_, i) => i !== index))}
               className="rounded p-1 text-slate-500 hover:bg-red-50 hover:text-red-600"
             >
-              ✕
+              <X aria-hidden="true" className="size-4" />
             </button>
           </li>
         ))}
       </ul>
       <Button variant="secondary" className="mt-2" onClick={() => onChange([...options, { label: '', value: '' }])}>
+        <Plus aria-hidden="true" className="size-4" />
         Add option
       </Button>
       <p className="mt-2 text-xs text-slate-500">

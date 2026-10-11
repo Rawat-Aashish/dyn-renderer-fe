@@ -10,6 +10,7 @@ import type { AuditAction } from '../../types/submission'
 
 const PHRASES: Record<AuditAction, string> = {
   FORM_CREATED: 'Form created',
+  FORM_CLONED: 'Form cloned',
   FORM_UPDATED: 'Details updated',
   VERSION_CREATED: 'New version created',
   VERSION_PUBLISHED: 'Version published',

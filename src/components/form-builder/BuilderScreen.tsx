@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useBlocker } from 'react-router-dom'
 import { findComponent, flattenComponents } from '../../lib/component-meta'
 import { useBuilderStore } from '../../stores/builder.store'
-import type { ComponentType, Condition, FormComponent } from '../../types/form'
+import type { Condition, FormComponent } from '../../types/form'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
-import { EmptyState } from '../ui/StateViews'
-import { AddComponentDialog } from './AddComponentDialog'
+import { AddComponentDialog, type Adding } from './AddComponentDialog'
+import { AddFieldMenu } from './AddFieldMenu'
 import { Canvas } from './Canvas'
-import { Palette } from './Palette'
+import { FormOutline } from './FormOutline'
+import { FormOverview } from './FormOverview'
 import { PropertiesPanel } from './PropertiesPanel'
 import { PublishProblems } from './PublishProblems'
 
@@ -18,16 +19,22 @@ interface BuilderScreenProps {
   readOnly: boolean
   /** Shown above the columns, normally the reason the form is read-only. */
   notice?: ReactNode
+  /** Shortcuts on the overview card, which fills the right side while no field is selected. */
+  overview?: { previewTo?: string; onPublish?: () => void }
 }
 
-export function BuilderScreen({ formId, components, conditions, readOnly, notice }: BuilderScreenProps) {
+export function BuilderScreen({ formId, components, conditions, readOnly, notice, overview }: BuilderScreenProps) {
   const selectedId = useBuilderStore((state) => state.selectedId)
   const dirty = useBuilderStore((state) => state.settingsDirty)
   const publishState = useBuilderStore((state) => state.publishErrors)
+  const collapsedIds = useBuilderStore((state) => state.collapsed)
   const select = useBuilderStore((state) => state.select)
   const setPublishErrors = useBuilderStore((state) => state.setPublishErrors)
+  const toggleSection = useBuilderStore((state) => state.toggleSection)
+  const expandSection = useBuilderStore((state) => state.expandSection)
+  const setCollapsed = useBuilderStore((state) => state.setCollapsed)
   const reset = useBuilderStore((state) => state.reset)
-  const [adding, setAdding] = useState<ComponentType | null>(null)
+  const [adding, setAdding] = useState<Adding | null>(null)
   const [pending, setPending] = useState<(() => void) | null>(null)
 
   const publishErrors = useMemo(
@@ -42,6 +49,7 @@ export function BuilderScreen({ formId, components, conditions, readOnly, notice
   const sections = useMemo(() => flat.filter((component) => component.componentType === 'SECTION'), [flat])
   const existingCodes = useMemo(() => new Set(flat.map((component) => component.fieldCode)), [flat])
   const logicCodes = useMemo(() => new Set(conditions.map((condition) => condition.targetFieldCode)), [conditions])
+  const collapsed = useMemo(() => new Set(collapsedIds), [collapsedIds])
   const errorCodes = useMemo(
     () => new Set(Object.keys(publishErrors).filter((code) => code !== 'form')),
     [publishErrors],
@@ -62,6 +70,21 @@ export function BuilderScreen({ formId, components, conditions, readOnly, notice
     else action()
   }
 
+  /** Selects a component, opening the section it is in first so it is not hidden. */
+  const goTo = useCallback(
+    (id: number) => {
+      const parent = flat.find((component) => component.id === id)?.parentSectionId
+      if (parent) expandSection(parent)
+      select(id)
+      requestAnimationFrame(() =>
+        document.getElementById(`canvas-item-${id}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }),
+      )
+    },
+    [flat, expandSection, select],
+  )
+
+  const showOutline = components.length > 0
+
   return (
     <div>
       {notice && <div className="mb-4">{notice}</div>}
@@ -70,41 +93,67 @@ export function BuilderScreen({ formId, components, conditions, readOnly, notice
           <PublishProblems
             problems={publishErrors}
             components={flat}
-            onSelect={(component) => guarded(() => select(component.id))}
+            onSelect={(component) => guarded(() => goTo(component.id))}
             onDismiss={() => setPublishErrors(formId, {})}
           />
         </div>
       )}
 
       <div
-        className={`grid items-start gap-4 ${
-          readOnly ? 'lg:grid-cols-[minmax(0,1fr)_24rem]' : 'lg:grid-cols-[13rem_minmax(0,1fr)_24rem]'
+        className={`grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] ${
+          showOutline ? 'xl:grid-cols-[13rem_minmax(0,1fr)_22rem]' : ''
         }`}
       >
-        {!readOnly && <Palette onPick={(type) => guarded(() => setAdding(type))} />}
+        {showOutline && (
+          <div className="hidden xl:sticky xl:top-18 xl:block">
+            <FormOutline
+              components={components}
+              selectedId={selectedId}
+              onSelect={(id) => guarded(() => goTo(id))}
+              hasSections={sections.length > 0}
+              onCollapseAll={() => setCollapsed(sections.map((section) => section.id))}
+              onExpandAll={() => setCollapsed([])}
+            />
+          </div>
+        )}
 
-        <section aria-label="Form canvas" className="min-w-0">
-          {components.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-white">
-              <EmptyState
-                title={readOnly ? 'This form has no fields' : 'Start with a field'}
-                message={readOnly ? undefined : 'Pick a field type from the list on the left to add it to the form.'}
-              />
-            </div>
-          ) : (
+        <section aria-label="Form canvas" className="min-w-0 space-y-3">
+          {components.length === 0 && readOnly && (
+            <p className="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-10 text-center text-sm text-slate-500">
+              This form has no fields.
+            </p>
+          )}
+          {components.length > 0 && (
             <Canvas
               formId={formId}
               components={components}
               selectedId={selectedId}
-              onSelect={(id) => guarded(() => select(id))}
+              onSelect={(id) => guarded(() => goTo(id))}
               readOnly={readOnly}
               errorCodes={errorCodes}
               logicCodes={logicCodes}
+              collapsed={collapsed}
+              onToggleSection={toggleSection}
+              onAdd={
+                readOnly
+                  ? undefined
+                  : (type, parentSectionId) =>
+                      guarded(() =>
+                        setAdding({ type, parent: sections.find((section) => section.id === parentSectionId) ?? null }),
+                      )
+              }
+            />
+          )}
+          {!readOnly && (
+            <AddFieldMenu
+              allowSection
+              heading={components.length === 0 ? 'Start building the form. Add your first field:' : 'Add to the form:'}
+              onPick={(type) => guarded(() => setAdding({ type, parent: null }))}
             />
           )}
         </section>
 
-        <div className="lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+        <div className="lg:sticky lg:top-18 lg:max-h-[calc(100vh-5.5rem)] lg:overflow-y-auto">
           {selected ? (
             <PropertiesPanel
               key={selected.id}
@@ -116,19 +165,22 @@ export function BuilderScreen({ formId, components, conditions, readOnly, notice
               readOnly={readOnly}
             />
           ) : (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-10 text-center text-sm text-slate-500">
-              Select a field on the canvas to see and edit its settings.
-            </div>
+            <FormOverview
+              components={components}
+              conditions={conditions}
+              previewTo={overview?.previewTo}
+              onPublish={readOnly ? undefined : overview?.onPublish}
+            />
           )}
         </div>
       </div>
 
       <AddComponentDialog
         formId={formId}
-        type={adding}
+        adding={adding}
         existingCodes={existingCodes}
         onClose={() => setAdding(null)}
-        onAdded={(created) => select(created.id)}
+        onAdded={(created) => goTo(created.id)}
       />
 
       <ConfirmDialog

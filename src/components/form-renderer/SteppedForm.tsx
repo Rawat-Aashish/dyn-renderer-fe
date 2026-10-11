@@ -1,3 +1,4 @@
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useEffect, useRef, type ReactNode } from 'react'
 import type { FormFiller } from '../../hooks/useFormFiller'
 import type { StepFlow } from '../../hooks/useStepFlow'
@@ -18,14 +19,6 @@ interface SteppedFormProps {
 
 const navButton =
   'grid size-8 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-600 transition-colors duration-150 hover:bg-slate-200 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600'
-
-function Chevron({ direction }: { direction: 'left' | 'right' }) {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="size-4">
-      <path d={direction === 'left' ? 'M12.5 4.5 7 10l5.5 5.5' : 'M7.5 4.5 13 10l-5.5 5.5'} />
-    </svg>
-  )
-}
 
 /** One step of the form at a time, with a small top row, progress, back/forward arrows and the Next / Submit button. */
 export function SteppedForm({ config, filler, flow, onSubmit, submitting = false, notice }: SteppedFormProps) {
@@ -61,7 +54,7 @@ export function SteppedForm({ config, filler, flow, onSubmit, submitting = false
       <div className="flex items-center justify-between gap-3">
         {!isFirst ? (
           <button type="button" aria-label="Previous section" onClick={flow.back} className={navButton}>
-            <Chevron direction="left" />
+            <ChevronLeft aria-hidden="true" className="size-4" />
           </button>
         ) : (
           <span aria-hidden="true" className="size-8 shrink-0" />
@@ -73,7 +66,7 @@ export function SteppedForm({ config, filler, flow, onSubmit, submitting = false
         </p>
         {canForward ? (
           <button type="button" aria-label="Next section" onClick={flow.advance} className={navButton}>
-            <Chevron direction="right" />
+            <ChevronRight aria-hidden="true" className="size-4" />
           </button>
         ) : (
           <span aria-hidden="true" className="size-8 shrink-0" />

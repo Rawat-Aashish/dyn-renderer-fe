@@ -44,7 +44,7 @@ export interface SubmissionList {
   totalPages: number
 }
 
-export type AuditAction = 'FORM_CREATED' | 'FORM_UPDATED' | 'VERSION_CREATED' | 'VERSION_PUBLISHED' | 'FORM_ARCHIVED'
+export type AuditAction = 'FORM_CREATED' | 'FORM_CLONED' | 'FORM_UPDATED' | 'VERSION_CREATED' | 'VERSION_PUBLISHED' | 'FORM_ARCHIVED'
 
 export interface AuditEntry {
   id: number

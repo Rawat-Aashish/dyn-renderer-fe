@@ -1,4 +1,5 @@
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from '@headlessui/react'
+import { Check, ChevronDown } from 'lucide-react'
 import type { Option } from '../../types/form'
 import { controlClass } from './control-class'
 
@@ -7,25 +8,29 @@ interface ListboxSelectProps {
   value: string
   onChange: (value: string) => void
   options: Option[]
+  /** Shown while nothing is chosen. */
   placeholder?: string | null
+  /** When set, an entry with this label and the empty value tops the list: the way to clear the choice. */
+  clearLabel?: string
   disabled?: boolean
   invalid?: boolean
   describedBy?: string
 }
 
-/** A single-choice dropdown with a styled list. The empty entry at the top is how a choice is cleared. */
+/** A single-choice dropdown with a styled list that opens above the page instead of being clipped by it. */
 export function ListboxSelect({
   id,
   value,
   onChange,
   options,
   placeholder,
+  clearLabel,
   disabled,
   invalid,
   describedBy,
 }: ListboxSelectProps) {
   const selected = options.find((option) => option.value === value)
-  const emptyLabel = placeholder || 'Select…'
+  const emptyLabel = placeholder || clearLabel || 'Select…'
 
   return (
     <Listbox value={value} onChange={onChange} disabled={disabled}>
@@ -42,42 +47,31 @@ export function ListboxSelect({
             event.currentTarget.click()
           }
         }}
-        className={`${controlClass(Boolean(invalid))} flex cursor-pointer items-center justify-between gap-2 text-left data-[open]:border-accent-500 data-[open]:ring-2 data-[open]:ring-accent-100 disabled:cursor-not-allowed`}
+        className={`${controlClass(Boolean(invalid))} flex cursor-pointer items-center justify-between gap-2 text-left data-open:border-accent-500 data-open:ring-2 data-open:ring-accent-100 disabled:cursor-not-allowed`}
       >
         <span className={`truncate ${selected ? '' : 'text-slate-400'}`}>{selected ? selected.label : emptyLabel}</span>
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" className="size-4 shrink-0 text-slate-500">
-          <path d="m5 8 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-slate-500 transition-transform duration-150 group-data-open:rotate-180" />
       </ListboxButton>
       <ListboxOptions
         anchor="bottom start"
         className="z-50 max-h-64 w-(--button-width) overflow-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg [--anchor-gap:6px] focus:outline-none"
       >
-        <ListboxOption
-          value=""
-          className="cursor-pointer rounded-lg px-3 py-2 text-sm text-slate-500 data-[focus]:bg-accent-50"
-        >
-          {emptyLabel}
-        </ListboxOption>
+        {clearLabel !== undefined && (
+          <ListboxOption
+            value=""
+            className="cursor-pointer rounded-lg px-3 py-2 text-sm text-slate-500 data-focus:bg-accent-50"
+          >
+            {clearLabel}
+          </ListboxOption>
+        )}
         {options.map((option, index) => (
           <ListboxOption
             key={`${option.value}-${index}`}
             value={option.value}
-            className="group flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm text-slate-800 data-[focus]:bg-accent-50 data-[selected]:font-medium data-[selected]:text-accent-800"
+            className="group flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm text-slate-800 data-focus:bg-accent-50 data-selected:bg-accent-100/60 data-selected:font-medium data-selected:text-accent-800"
           >
-            {option.label}
-            <svg
-              viewBox="0 0 12 12"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-              className="invisible size-3.5 shrink-0 text-accent-600 group-data-[selected]:visible"
-            >
-              <path d="M2.5 6.5l2.5 2.5 4.5-5" />
-            </svg>
+            <span className="truncate">{option.label}</span>
+            <Check aria-hidden="true" className="invisible size-4 shrink-0 text-accent-600 group-data-selected:visible" />
           </ListboxOption>
         ))}
       </ListboxOptions>

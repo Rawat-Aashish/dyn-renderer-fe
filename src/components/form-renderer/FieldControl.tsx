@@ -128,6 +128,7 @@ export function FieldControl({
           value={asString(value)}
           options={options}
           placeholder={placeholder}
+          clearLabel={placeholder || 'Select…'}
           disabled={disabled}
           invalid={invalid}
           describedBy={describedBy}

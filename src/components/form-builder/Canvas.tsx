@@ -1,12 +1,15 @@
 import { DragDropContext, Draggable, Droppable, type DraggableProvidedDragHandleProps, type DropResult } from '@hello-pangea/dnd'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { ChevronDown, ChevronRight, GripVertical } from 'lucide-react'
 import { messageOf } from '../../api/client'
 import { formKey } from '../../hooks/useFormDetail'
+import { TYPE_ICONS } from '../../lib/component-icons'
 import { TYPE_LABELS } from '../../lib/component-meta'
 import { reorderComponents } from '../../services/component.service'
-import type { FormComponent, FormDetail } from '../../types/form'
+import type { ComponentType, FormComponent, FormDetail } from '../../types/form'
 import { Badge } from '../ui/Badge'
 import { Alert } from '../ui/StateViews'
+import { AddFieldMenu } from './AddFieldMenu'
 
 interface CanvasProps {
   formId: number
@@ -18,6 +21,11 @@ interface CanvasProps {
   errorCodes?: ReadonlySet<string>
   /** Field codes that a condition controls; they get a Logic marker. */
   logicCodes?: ReadonlySet<string>
+  /** Adds a field of a type, last inside the given section (null for the top level). Absent when read-only. */
+  onAdd?: (type: ComponentType, parentSectionId: number | null) => void
+  /** Sections that are folded shut. */
+  collapsed: ReadonlySet<number>
+  onToggleSection: (id: number) => void
 }
 
 interface ReorderVars {
@@ -40,19 +48,27 @@ function Grip(props: DraggableProvidedDragHandleProps | null) {
       {...props}
       className="flex shrink-0 cursor-grab items-center self-stretch rounded-l-lg px-2 text-slate-400 hover:bg-slate-50 hover:text-slate-600 active:cursor-grabbing"
     >
-      <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" className="size-4">
-        <circle cx="7" cy="5" r="1.4" /><circle cx="13" cy="5" r="1.4" />
-        <circle cx="7" cy="10" r="1.4" /><circle cx="13" cy="10" r="1.4" />
-        <circle cx="7" cy="15" r="1.4" /><circle cx="13" cy="15" r="1.4" />
-      </svg>
+      <GripVertical aria-hidden="true" className="size-4" />
     </span>
   )
 }
 
-export function Canvas({ formId, components, selectedId, onSelect, readOnly, errorCodes, logicCodes }: CanvasProps) {
+export function Canvas({
+  formId,
+  components,
+  selectedId,
+  onSelect,
+  readOnly,
+  errorCodes,
+  logicCodes,
+  onAdd,
+  collapsed,
+  onToggleSection,
+}: CanvasProps) {
   const queryClient = useQueryClient()
 
   const reorder = useMutation({
+    meta: { toast: 'Order saved' },
     mutationFn: ({ parentId, ids }: ReorderVars) => reorderComponents(formId, parentId, ids),
     onMutate: async ({ parentId, ids }) => {
       await queryClient.cancelQueries({ queryKey: formKey(formId) })
@@ -94,8 +110,11 @@ export function Canvas({ formId, components, selectedId, onSelect, readOnly, err
                   const selected = component.id === selectedId
                   const failed = errorCodes?.has(component.fieldCode) ?? false
                   const isSection = component.componentType === 'SECTION'
+                  const open = !collapsed.has(component.id)
+                  const childFailed = isSection && component.children.some((child) => errorCodes?.has(child.fieldCode))
+                  const TypeIcon = TYPE_ICONS[component.componentType]
                   return (
-                    <div ref={drag.innerRef} {...drag.draggableProps} className="mb-2">
+                    <div ref={drag.innerRef} {...drag.draggableProps} id={`canvas-item-${component.id}`} className="mb-2">
                       <div
                         className={`flex items-stretch rounded-lg border bg-white shadow-sm transition-shadow duration-150 ${
                           failed
@@ -106,26 +125,52 @@ export function Canvas({ formId, components, selectedId, onSelect, readOnly, err
                         } ${dragSnapshot.isDragging ? 'shadow-lg' : ''}`}
                       >
                         {!readOnly && Grip(drag.dragHandleProps)}
+                        {isSection && (
+                          <button
+                            type="button"
+                            aria-expanded={open}
+                            aria-controls={`section-body-${component.id}`}
+                            aria-label={`${open ? 'Collapse' : 'Expand'} ${component.fieldLabel}`}
+                            onClick={() => onToggleSection(component.id)}
+                            className={`grid w-8 shrink-0 place-items-center text-slate-500 transition-colors duration-150 hover:text-slate-900 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-600 ${
+                              readOnly ? 'rounded-l-lg' : ''
+                            }`}
+                          >
+                            {open ? (
+                              <ChevronDown aria-hidden="true" className="size-4" />
+                            ) : (
+                              <ChevronRight aria-hidden="true" className="size-4" />
+                            )}
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => onSelect(component.id)}
                           aria-current={selected || undefined}
                           className={`flex min-w-0 flex-1 items-center justify-between gap-3 py-3 pr-4 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-600 ${
-                            readOnly ? 'pl-4' : 'pl-1'
+                            readOnly && !isSection ? 'pl-4' : 'pl-1'
                           } rounded-lg`}
                         >
-                          <span className="min-w-0">
-                            <span
-                              className={`block truncate text-sm text-slate-900 ${
-                                component.componentType === 'HEADING' ? 'text-base font-semibold' : 'font-medium'
-                              }`}
-                            >
-                              {component.fieldLabel}
+                          <span className="flex min-w-0 items-center gap-3">
+                            <TypeIcon aria-hidden="true" className="size-4 shrink-0 text-slate-400" />
+                            <span className="min-w-0">
+                              <span
+                                className={`block truncate text-sm text-slate-900 ${
+                                  component.componentType === 'HEADING' ? 'text-base font-semibold' : 'font-medium'
+                                }`}
+                              >
+                                {component.fieldLabel}
+                              </span>
+                              <span className="block truncate font-mono text-xs text-slate-500">{component.fieldCode}</span>
                             </span>
-                            <span className="block truncate font-mono text-xs text-slate-500">{component.fieldCode}</span>
                           </span>
                           <span className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-                            {failed && <Badge tone="amber">Needs fixing</Badge>}
+                            {(failed || (childFailed && !open)) && <Badge tone="amber">Needs fixing</Badge>}
+                            {isSection && !open && (
+                              <Badge>
+                                {component.children.length} {component.children.length === 1 ? 'field' : 'fields'}
+                              </Badge>
+                            )}
                             {component.isRequired && <Badge tone="blue">Required</Badge>}
                             {component.isReadOnly && <Badge>Read-only</Badge>}
                             {component.isDisabled && <Badge>Disabled</Badge>}
@@ -136,14 +181,25 @@ export function Canvas({ formId, components, selectedId, onSelect, readOnly, err
                         </button>
                       </div>
 
-                      {isSection && (
-                        <div className="mt-2 ml-6 border-l-2 border-brand-100 pl-3">
-                          {component.children.length === 0 && (
+                      {isSection && open && (
+                        <div id={`section-body-${component.id}`} className="mt-2 ml-6 border-l-2 border-brand-100 pl-3">
+                          {component.children.length === 0 && readOnly && (
                             <p className="mb-2 rounded-md border border-dashed border-slate-300 px-3 py-3 text-xs text-slate-500">
-                              This section is empty. Add a field, then choose this section in the field&apos;s settings.
+                              This section is empty.
                             </p>
                           )}
                           {renderList(`section-${component.id}`, component.children)}
+                          {onAdd && (
+                            <AddFieldMenu
+                              allowSection={false}
+                              heading={
+                                component.children.length === 0
+                                  ? 'This section is empty. Add its first field:'
+                                  : 'Add to this section:'
+                              }
+                              onPick={(type) => onAdd(type, component.id)}
+                            />
+                          )}
                         </div>
                       )}
                     </div>

@@ -1,11 +1,13 @@
-import { useParams } from 'react-router-dom'
+import { useOutletContext, useParams } from 'react-router-dom'
 import { BuilderScreen } from '../../components/form-builder/BuilderScreen'
 import { Alert } from '../../components/ui/StateViews'
 import { useFormDetail } from '../../hooks/useFormDetail'
 import { isLocked } from '../../lib/form-status'
+import type { FormOutletContext } from '../../layouts/form-outlet'
 
 export function BuilderPage() {
   const formId = Number(useParams().id)
+  const { requestPublish } = useOutletContext<FormOutletContext>()
   const { data: form } = useFormDetail(formId)
   if (!form) return null
 
@@ -23,6 +25,7 @@ export function BuilderPage() {
       conditions={form.conditions}
       readOnly={locked}
       notice={notice}
+      overview={{ previewTo: `/admin/forms/${formId}/preview`, onPublish: requestPublish }}
     />
   )
 }

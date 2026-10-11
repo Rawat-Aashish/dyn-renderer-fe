@@ -37,6 +37,7 @@ function FormDialogBody({ form, onClose }: { form?: Form; onClose: () => void })
   const [category, setCategory] = useState(form?.category ?? '')
 
   const mutation = useMutation({
+    meta: { toast: form ? 'Details saved' : 'Form created' },
     mutationFn: () => {
       const details = { name, description: description || undefined, category: category || undefined }
       return form ? updateForm(form.id, details) : createForm({ ...details, code })

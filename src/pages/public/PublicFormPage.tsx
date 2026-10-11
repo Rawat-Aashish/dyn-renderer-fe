@@ -28,9 +28,10 @@ async function loadSession(code: string): Promise<StoredSession> {
   return session
 }
 
-function Page({ children }: { children: ReactNode }) {
+/** The form sits at the top and scrolls; a message (thank you, not available, loading) is centred on the screen. */
+function Page({ children, centered = false }: { children: ReactNode; centered?: boolean }) {
   return (
-    <div className="form-backdrop min-h-screen px-4 py-5 sm:py-8">
+    <div className={`form-backdrop min-h-screen px-4 py-5 sm:py-8 ${centered ? 'grid place-items-center' : ''}`}>
       <div className="mx-auto w-full max-w-lg">{children}</div>
     </div>
   )
@@ -38,7 +39,7 @@ function Page({ children }: { children: ReactNode }) {
 
 function Notice({ title, message, action }: { title: string; message: string; action?: ReactNode }) {
   return (
-    <Page>
+    <Page centered>
       <div role="alert" className="rounded-2xl bg-white p-6 text-center shadow-lg ring-1 ring-slate-200 sm:p-10">
         <h1 className="text-xl font-semibold tracking-tight text-slate-900">{title}</h1>
         <p className="mt-2 text-sm leading-relaxed text-slate-600">{message}</p>
@@ -50,7 +51,7 @@ function Notice({ title, message, action }: { title: string; message: string; ac
 
 function ThankYou({ name }: { name: string }) {
   return (
-    <Page>
+    <Page centered>
       <div className="rounded-2xl bg-white p-8 text-center shadow-lg ring-1 ring-slate-200 sm:p-12">
         <svg viewBox="0 0 52 52" fill="none" aria-hidden="true" className="mx-auto size-24 text-accent-600">
           <circle className="success-circle" cx="26" cy="26" r="25" stroke="currentColor" strokeWidth="2" />
@@ -192,7 +193,7 @@ export function PublicFormPage() {
 
   if (query.isPending) {
     return (
-      <Page>
+      <Page centered>
         <Spinner label="Loading form" />
       </Page>
     )

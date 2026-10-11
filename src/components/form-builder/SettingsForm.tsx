@@ -24,7 +24,6 @@ interface SettingsFormProps {
   controlled: { isVisible: boolean; isDisabled: boolean; isRequired: boolean }
   /** A condition uses this field, so the server refuses a change of its code. */
   codeLocked: boolean
-  onSaved: () => void
 }
 
 function Checkbox({
@@ -59,7 +58,7 @@ function Checkbox({
 
 const BY_CONDITION = 'Controlled by a condition (Logic tab).'
 
-export function SettingsForm({ formId, component, sections, readOnly, controlled, codeLocked, onSaved }: SettingsFormProps) {
+export function SettingsForm({ formId, component, sections, readOnly, controlled, codeLocked }: SettingsFormProps) {
   const queryClient = useQueryClient()
   const setSettingsDirty = useBuilderStore((state) => state.setSettingsDirty)
   const defaultId = useId()
@@ -75,11 +74,9 @@ export function SettingsForm({ formId, component, sections, readOnly, controlled
   }, [dirty, readOnly, setSettingsDirty])
 
   const save = useMutation({
+    meta: { toast: 'Field saved' },
     mutationFn: () => updateComponent(formId, component.id, toRequest(component, draft)),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: formKey(formId) })
-      onSaved()
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: formKey(formId) }),
   })
 
   function set<K extends keyof SettingsDraft>(key: K, value: SettingsDraft[K]) {

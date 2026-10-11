@@ -1,3 +1,4 @@
+import { TriangleAlert } from 'lucide-react'
 import { TYPE_LABELS } from '../../lib/component-meta'
 import type { FormComponent } from '../../types/form'
 
@@ -16,9 +17,12 @@ export function PublishProblems({ problems, components, onSelect, onDismiss }: P
   return (
     <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-semibold text-red-800">The form cannot be published yet</h2>
-          <p className="mt-0.5 text-sm text-red-700">Fix these, then publish again. Nothing was published.</p>
+        <div className="flex items-start gap-3">
+          <TriangleAlert aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-red-600" />
+          <div>
+            <h2 className="text-sm font-semibold text-red-800">The form cannot be published yet</h2>
+            <p className="mt-0.5 text-sm text-red-700">Fix these, then publish again. Nothing was published.</p>
+          </div>
         </div>
         <button
           type="button"

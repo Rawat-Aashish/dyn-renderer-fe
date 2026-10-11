@@ -11,19 +11,30 @@ import { Dialog } from '../ui/Dialog'
 import { Input } from '../ui/Input'
 import { Alert } from '../ui/StateViews'
 
+export interface Adding {
+  type: ComponentType
+  /** The section it goes into, or null for the top level of the form. */
+  parent: FormComponent | null
+}
+
 interface AddComponentDialogProps {
   formId: number
-  /** The type being added; the dialog is open while this is set. */
-  type: ComponentType | null
+  /** What is being added; the dialog is open while this is set. */
+  adding: Adding | null
   existingCodes: Set<string>
   onClose: () => void
   onAdded: (component: FormComponent) => void
 }
 
-export function AddComponentDialog({ formId, type, existingCodes, onClose, onAdded }: AddComponentDialogProps) {
+export function AddComponentDialog({ formId, adding, existingCodes, onClose, onAdded }: AddComponentDialogProps) {
+  const title = adding
+    ? `Add ${TYPE_LABELS[adding.type].toLowerCase()}${adding.parent ? ` to ${adding.parent.fieldLabel}` : ''}`
+    : ''
   return (
-    <Dialog open={type !== null} title={type ? `Add ${TYPE_LABELS[type].toLowerCase()}` : ''} onClose={onClose}>
-      {type && <AddBody formId={formId} type={type} existingCodes={existingCodes} onClose={onClose} onAdded={onAdded} />}
+    <Dialog open={adding !== null} title={title} onClose={onClose}>
+      {adding && (
+        <AddBody formId={formId} adding={adding} existingCodes={existingCodes} onClose={onClose} onAdded={onAdded} />
+      )}
     </Dialog>
   )
 }
@@ -37,18 +48,25 @@ function uniqueCode(base: string, taken: Set<string>): string {
 
 function AddBody({
   formId,
-  type,
+  adding,
   existingCodes,
   onClose,
   onAdded,
-}: Omit<AddComponentDialogProps, 'type'> & { type: ComponentType }) {
+}: Omit<AddComponentDialogProps, 'adding'> & { adding: Adding }) {
   const queryClient = useQueryClient()
   const [label, setLabel] = useState('')
   const [code, setCode] = useState('')
   const [codeEdited, setCodeEdited] = useState(false)
 
   const mutation = useMutation({
-    mutationFn: () => addComponent(formId, { fieldCode: code.trim(), fieldLabel: label, componentType: type }),
+    meta: { toast: 'Field added' },
+    mutationFn: () =>
+      addComponent(formId, {
+        fieldCode: code.trim(),
+        fieldLabel: label,
+        componentType: adding.type,
+        parentSectionId: adding.parent?.id,
+      }),
     onSuccess: async (created) => {
       await queryClient.invalidateQueries({ queryKey: formKey(formId) })
       onClose()

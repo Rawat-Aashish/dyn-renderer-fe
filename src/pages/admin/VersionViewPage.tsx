@@ -44,6 +44,7 @@ export function VersionViewPage() {
       components={configuration.components}
       conditions={configuration.conditions}
       readOnly
+      overview={{ previewTo: `/admin/forms/${formId}/versions/${version}/preview` }}
       notice={
         <Alert tone="info">
           Version {version} ({detail.status === 'PUBLISHED' ? 'live' : 'superseded'}) is a frozen snapshot and cannot be

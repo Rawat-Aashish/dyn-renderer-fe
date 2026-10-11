@@ -1,3 +1,5 @@
+import { Check } from 'lucide-react'
+
 interface ChoiceTileProps {
   kind: 'checkbox' | 'radio'
   label: string
@@ -34,18 +36,11 @@ export function ChoiceTile({ kind, label, checked, disabled, name, onChange, pla
           }`}
         />
         {kind === 'checkbox' ? (
-          <svg
-            viewBox="0 0 12 12"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+          <Check
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0 m-auto size-3 text-white opacity-0 transition-opacity duration-150 peer-checked:opacity-100"
-          >
-            <path d="M2.5 6.5l2.5 2.5 4.5-5" />
-          </svg>
+            strokeWidth={3}
+            className="pointer-events-none absolute inset-0 m-auto size-3.5 text-white opacity-0 transition-opacity duration-150 peer-checked:opacity-100"
+          />
         ) : (
           <span
             aria-hidden="true"

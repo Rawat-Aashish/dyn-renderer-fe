@@ -1,4 +1,5 @@
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react'
+import { ChevronDown } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import type { Option } from '../../types/form'
 import { ChoiceTile } from './ChoiceTile'
@@ -67,9 +68,7 @@ export function MultiSelect({
                 <span className="text-slate-400">{placeholder || 'Select…'}</span>
               )}
             </span>
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" className="size-4 shrink-0 text-slate-500">
-              <path d="m5 8 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-slate-500" />
           </PopoverButton>
           {/* Anchored in a portal: it sits above the card and flips or shrinks near the screen edge instead of being clipped. */}
           <PopoverPanel

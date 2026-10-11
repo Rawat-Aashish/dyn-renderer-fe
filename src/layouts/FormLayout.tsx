@@ -1,29 +1,24 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { ArrowLeft, Archive, Eye, FilePlus2, Link2, Pencil, Rocket, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { Link, NavLink, Outlet, useNavigate, useParams } from 'react-router-dom'
+import { Link, Outlet, useNavigate, useParams } from 'react-router-dom'
+import { toast } from 'sonner'
 import { ApiError, messageOf } from '../api/client'
-import { FormDialog } from '../components/forms/FormDialog'
+import { FormActionDialogs, type FormAction } from '../components/forms/FormActionDialogs'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Alert, ErrorState, Spinner } from '../components/ui/StateViews'
 import { formKey, useFormDetail } from '../hooks/useFormDetail'
 import { describeStatus, isLocked } from '../lib/form-status'
-import { archiveForm, deleteForm } from '../services/form.service'
-import { createVersion, publishVersion } from '../services/version.service'
+import { publishVersion } from '../services/version.service'
 import { useBuilderStore } from '../stores/builder.store'
-
-const TABS = [
-  { to: '', label: 'Builder', end: true },
-  { to: 'versions', label: 'Versions', end: false },
-  { to: 'submissions', label: 'Submissions', end: false },
-  { to: 'audit', label: 'Audit log', end: false },
-]
+import type { FormOutletContext } from './form-outlet'
 
 const previewLinkClass =
-  'inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors duration-150 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600'
+  'inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors duration-150 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600'
 
-/** Header and tabs shared by every screen under /admin/forms/:id. */
+/** Header shared by every screen under /admin/forms/:id. The form's sections live in the sidebar. */
 export function FormLayout() {
   const { id } = useParams()
   const formId = Number(id)
@@ -31,47 +26,18 @@ export function FormLayout() {
   const queryClient = useQueryClient()
   const query = useFormDetail(formId)
   const setPublishErrors = useBuilderStore((state) => state.setPublishErrors)
-  const [editing, setEditing] = useState(false)
-  const [deleting, setDeleting] = useState(false)
-  const [archiving, setArchiving] = useState(false)
+  const [action, setAction] = useState<FormAction | null>(null)
   const [publishing, setPublishing] = useState(false)
-  const [creatingVersion, setCreatingVersion] = useState(false)
-  const [copied, setCopied] = useState(false)
-
-  const refreshVersions = async () => {
-    await queryClient.invalidateQueries({ queryKey: formKey(formId) })
-    await queryClient.invalidateQueries({ queryKey: ['versions', formId] })
-    await queryClient.invalidateQueries({ queryKey: ['version', formId] })
-    await queryClient.invalidateQueries({ queryKey: ['forms'] })
-  }
-
-  const remove = useMutation({
-    mutationFn: () => deleteForm(formId),
-    onSuccess: async () => {
-      queryClient.removeQueries({ queryKey: formKey(formId) })
-      await queryClient.invalidateQueries({ queryKey: ['forms'] })
-      navigate('/admin/forms')
-    },
-  })
-
-  const archive = useMutation({
-    mutationFn: () => archiveForm(formId),
-    onSuccess: async (archived) => {
-      queryClient.setQueryData(formKey(formId), (old: unknown) =>
-        old && typeof old === 'object' ? { ...old, ...archived } : old,
-      )
-      await queryClient.invalidateQueries({ queryKey: ['forms'] })
-    },
-  })
 
   const publish = useMutation({
     mutationFn: (version: number) => publishVersion(formId, version),
-    onSuccess: refreshVersions,
-  })
-
-  const newVersion = useMutation({
-    mutationFn: () => createVersion(formId),
-    onSuccess: refreshVersions,
+    meta: { toast: 'Form published' },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: formKey(formId) })
+      await queryClient.invalidateQueries({ queryKey: ['versions', formId] })
+      await queryClient.invalidateQueries({ queryKey: ['version', formId] })
+      await queryClient.invalidateQueries({ queryKey: ['forms'] })
+    },
   })
 
   if (!Number.isInteger(formId) || (query.error instanceof ApiError && query.error.status === 404)) {
@@ -95,11 +61,11 @@ export function FormLayout() {
   const everPublished = form.publishedVersion !== null
   const isLive = everPublished && !form.archived
   const publicLink = `${window.location.origin}/f/${form.code}`
+  const outletContext: FormOutletContext = { requestPublish: () => setPublishing(true) }
 
   async function copyLink() {
     await navigator.clipboard.writeText(publicLink)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    toast.success('Link copied')
   }
 
   async function confirmPublish() {
@@ -111,6 +77,7 @@ export function FormLayout() {
       if (error instanceof ApiError && error.status === 400 && error.errors) {
         setPublishErrors(formId, error.errors)
         navigate(`/admin/forms/${formId}`)
+        toast.error('The form cannot be published yet. See the problems above the form.')
         return
       }
       throw error
@@ -119,8 +86,9 @@ export function FormLayout() {
 
   return (
     <div>
-      <Link to="/admin/forms" className="text-sm font-medium text-brand-700 hover:underline">
-        ← All forms
+      <Link to="/admin/forms" className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:underline">
+        <ArrowLeft aria-hidden="true" className="size-4" />
+        All forms
       </Link>
 
       <div className="mt-3 rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -135,46 +103,54 @@ export function FormLayout() {
             {isLive && (
               <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
                 <span className="text-slate-600">Public link</span>
-                <a
-                  href={publicLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-mono text-xs text-brand-700 hover:underline"
-                >
+                <a href={publicLink} target="_blank" rel="noreferrer" className="font-mono text-xs text-brand-700 hover:underline">
                   {publicLink}
                 </a>
                 <button
                   type="button"
                   onClick={copyLink}
-                  className="rounded-md border border-slate-300 px-2 py-0.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 px-2 py-0.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
                 >
-                  {copied ? 'Copied' : 'Copy link'}
+                  <Link2 aria-hidden="true" className="size-3.5" />
+                  Copy link
                 </button>
               </div>
             )}
           </div>
           <div className="flex flex-wrap gap-2">
             <Link to={`/admin/forms/${form.id}/preview`} className={previewLinkClass}>
+              <Eye aria-hidden="true" className="size-4" />
               Preview
             </Link>
             {!locked && (
-              <Button variant="secondary" onClick={() => setEditing(true)}>
+              <Button variant="secondary" onClick={() => setAction('edit')}>
+                <Pencil aria-hidden="true" className="size-4" />
                 Edit details
               </Button>
             )}
             {!form.archived && !everPublished && (
-              <Button variant="secondary" onClick={() => setDeleting(true)}>
+              <Button variant="secondary" onClick={() => setAction('delete')}>
+                <Trash2 aria-hidden="true" className="size-4" />
                 Delete
               </Button>
             )}
             {!form.archived && everPublished && (
-              <Button variant="secondary" onClick={() => setArchiving(true)}>
+              <Button variant="secondary" onClick={() => setAction('archive')}>
+                <Archive aria-hidden="true" className="size-4" />
                 Archive
               </Button>
             )}
-            {!form.archived && form.status === 'DRAFT' && <Button onClick={() => setPublishing(true)}>Publish</Button>}
+            {!form.archived && form.status === 'DRAFT' && (
+              <Button onClick={() => setPublishing(true)}>
+                <Rocket aria-hidden="true" className="size-4" />
+                Publish
+              </Button>
+            )}
             {!form.archived && form.status === 'PUBLISHED' && (
-              <Button onClick={() => setCreatingVersion(true)}>Create new version</Button>
+              <Button onClick={() => setAction('newVersion')}>
+                <FilePlus2 aria-hidden="true" className="size-4" />
+                Create new version
+              </Button>
             )}
           </div>
         </div>
@@ -184,32 +160,18 @@ export function FormLayout() {
             <Alert tone="info">This form is archived. It is no longer public and can no longer be changed.</Alert>
           </div>
         )}
-
-        <nav aria-label="Form sections" className="flex gap-1 border-t border-slate-200 px-3">
-          {TABS.map((tab) => (
-            <NavLink
-              key={tab.label}
-              to={tab.to}
-              end={tab.end}
-              className={({ isActive }) =>
-                `-mb-px border-b-2 px-3 py-3 text-sm font-medium transition-colors duration-150 ${
-                  isActive
-                    ? 'border-brand-600 text-brand-700'
-                    : 'border-transparent text-slate-600 hover:text-slate-900'
-                }`
-              }
-            >
-              {tab.label}
-            </NavLink>
-          ))}
-        </nav>
       </div>
 
       <div className="mt-6">
-        <Outlet />
+        <Outlet context={outletContext} />
       </div>
 
-      <FormDialog open={editing} onClose={() => setEditing(false)} form={form} />
+      <FormActionDialogs
+        form={form}
+        action={action}
+        onClose={() => setAction(null)}
+        onDeleted={() => navigate('/admin/forms')}
+      />
 
       <ConfirmDialog
         open={publishing}
@@ -228,47 +190,6 @@ export function FormLayout() {
             started it can still submit it.
           </p>
         )}
-      </ConfirmDialog>
-
-      <ConfirmDialog
-        open={creatingVersion}
-        title="Create a new version?"
-        confirmLabel="Create version"
-        onConfirm={() => newVersion.mutateAsync()}
-        onClose={() => setCreatingVersion(false)}
-      >
-        <p>
-          A new draft is created from the current version so you can change it. Version {form.publishedVersion} stays
-          live until you publish the draft, and a draft cannot be discarded once created.
-        </p>
-      </ConfirmDialog>
-
-      <ConfirmDialog
-        open={deleting}
-        title="Delete this form?"
-        confirmLabel="Delete form"
-        danger
-        onConfirm={() => remove.mutateAsync()}
-        onClose={() => setDeleting(false)}
-      >
-        <p>
-          <strong>{form.name}</strong> and everything built in it will be removed permanently. This cannot be undone.
-        </p>
-      </ConfirmDialog>
-
-      <ConfirmDialog
-        open={archiving}
-        title="Archive this form?"
-        confirmLabel="Archive form"
-        danger
-        requireText={form.code}
-        onConfirm={() => archive.mutateAsync()}
-        onClose={() => setArchiving(false)}
-      >
-        <p>
-          <strong>{form.name}</strong> will stop being public and can no longer be changed. Its name and code stay taken,
-          and archiving cannot be undone. Versions, submissions and the audit log stay readable.
-        </p>
       </ConfirmDialog>
     </div>
   )

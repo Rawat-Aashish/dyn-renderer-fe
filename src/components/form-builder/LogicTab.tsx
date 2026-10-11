@@ -131,6 +131,7 @@ function ConditionEditor({ formId, component, pair, condition, sources, readOnly
   }
 
   const save = useMutation({
+    meta: { toast: 'Condition saved' },
     mutationFn: () => (condition ? updateCondition(formId, condition.id, body) : addCondition(formId, body)),
     onSuccess: async () => {
       await refresh()
@@ -138,6 +139,7 @@ function ConditionEditor({ formId, component, pair, condition, sources, readOnly
     },
   })
   const remove = useMutation({
+    meta: { toast: 'Condition deleted' },
     mutationFn: () => deleteCondition(formId, condition!.id),
     onSuccess: refresh,
   })
