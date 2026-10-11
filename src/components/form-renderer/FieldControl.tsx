@@ -72,7 +72,7 @@ export function FieldControl({
       return (
         <textarea
           id={id}
-          rows={4}
+          rows={3}
           value={asString(value)}
           placeholder={placeholder ?? undefined}
           disabled={disabled}
@@ -162,7 +162,7 @@ export function FieldControl({
           aria-labelledby={`${id}-label`}
           onBlur={groupBlur}
           {...ariaProps}
-          className="space-y-2"
+          className="space-y-1.5"
         >
           {options.length === 0 && <p className="text-sm text-slate-500">No options yet</p>}
           {options.map((option, index) => (
@@ -187,7 +187,7 @@ export function FieldControl({
     case 'CHECKBOX': {
       const chosen = asStrings(value)
       return (
-        <div id={id} role="group" aria-labelledby={`${id}-label`} onBlur={groupBlur} {...ariaProps} className="space-y-2">
+        <div id={id} role="group" aria-labelledby={`${id}-label`} onBlur={groupBlur} {...ariaProps} className="space-y-1.5">
           {options.length === 0 && <p className="text-sm text-slate-500">No options yet</p>}
           {options.map((option, index) => (
             <ChoiceTile

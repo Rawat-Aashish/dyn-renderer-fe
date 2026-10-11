@@ -16,21 +16,18 @@ interface SteppedFormProps {
   notice?: ReactNode
 }
 
-// Light to dark: the further along, the deeper the colour. Whole class names so Tailwind can see them.
-const RAMP = ['bg-accent-200', 'bg-accent-300', 'bg-accent-400', 'bg-accent-500', 'bg-accent-600', 'bg-accent-700']
-
 const navButton =
-  'grid size-11 shrink-0 place-items-center rounded-full bg-white/15 text-white transition-colors duration-150 hover:bg-white/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white'
+  'grid size-8 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-600 transition-colors duration-150 hover:bg-slate-200 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600'
 
 function Chevron({ direction }: { direction: 'left' | 'right' }) {
   return (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="size-5">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="size-4">
       <path d={direction === 'left' ? 'M12.5 4.5 7 10l5.5 5.5' : 'M7.5 4.5 13 10l-5.5 5.5'} />
     </svg>
   )
 }
 
-/** One step of the form at a time, with the header, progress, back/forward arrows and the Next / Submit button. */
+/** One step of the form at a time, with a small top row, progress, back/forward arrows and the Next / Submit button. */
 export function SteppedForm({ config, filler, flow, onSubmit, submitting = false, notice }: SteppedFormProps) {
   const { steps, step, index, isFirst, isLast, canForward, direction } = flow
   const multiStep = steps.length > 1
@@ -49,6 +46,7 @@ export function SteppedForm({ config, filler, flow, onSubmit, submitting = false
   }, [stepKey, flow.focusPending])
 
   const transition = direction === 'forward' ? 'step-in-forward' : direction === 'back' ? 'step-in-back' : ''
+  const position = multiStep ? `Step ${index + 1} of ${steps.length}` : ''
 
   return (
     <form
@@ -58,60 +56,53 @@ export function SteppedForm({ config, filler, flow, onSubmit, submitting = false
         if (isLast) onSubmit()
         else flow.advance()
       }}
-      className="overflow-hidden rounded-2xl bg-white shadow-lg ring-1 ring-slate-200"
+      className="rounded-2xl bg-white p-4 shadow-lg ring-1 ring-slate-200 sm:px-6 sm:py-5"
     >
-      <header className="bg-accent-700 px-5 pt-4 pb-7 text-white sm:px-8">
-        <div className="flex min-h-11 items-center justify-between">
-          {!isFirst ? (
-            <button type="button" aria-label="Previous section" onClick={flow.back} className={navButton}>
-              <Chevron direction="left" />
-            </button>
-          ) : (
-            <span aria-hidden="true" className="size-11" />
-          )}
-          {multiStep && (
-            <p className="text-xs font-semibold tracking-wide text-accent-100 uppercase">
-              Step {index + 1} of {steps.length}
-            </p>
-          )}
-          {canForward ? (
-            <button type="button" aria-label="Next section" onClick={flow.advance} className={navButton}>
-              <Chevron direction="right" />
-            </button>
-          ) : (
-            <span aria-hidden="true" className="size-11" />
-          )}
-        </div>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">{config.name}</h1>
-        {isFirst && config.description && (
-          <p className="mt-1.5 text-sm leading-relaxed text-accent-100">{config.description}</p>
+      <div className="flex items-center justify-between gap-3">
+        {!isFirst ? (
+          <button type="button" aria-label="Previous section" onClick={flow.back} className={navButton}>
+            <Chevron direction="left" />
+          </button>
+        ) : (
+          <span aria-hidden="true" className="size-8 shrink-0" />
         )}
-      </header>
+        <p className="min-w-0 truncate text-center text-[11px] font-medium tracking-wide text-slate-500">
+          {config.name}
+          {position && <span className="text-slate-400"> · </span>}
+          {position}
+        </p>
+        {canForward ? (
+          <button type="button" aria-label="Next section" onClick={flow.advance} className={navButton}>
+            <Chevron direction="right" />
+          </button>
+        ) : (
+          <span aria-hidden="true" className="size-8 shrink-0" />
+        )}
+      </div>
 
       {multiStep && (
-        <div aria-hidden="true" className="flex gap-1.5 px-5 pt-5 sm:px-8">
-          {steps.map((item, i) => (
-            <span
-              key={item.key}
-              className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${
-                i <= index ? RAMP[Math.round((i / (steps.length - 1)) * (RAMP.length - 1))] : 'bg-slate-200'
-              }`}
-            />
-          ))}
-        </div>
+        <progress
+          className="form-progress mt-3"
+          value={index + 1}
+          max={steps.length}
+          aria-label={`${position}`}
+        />
       )}
 
       <p className="sr-only" aria-live="polite">
-        {multiStep && step ? `Step ${index + 1} of ${steps.length}${step.title ? `: ${step.title}` : ''}` : ''}
+        {multiStep && step ? `${position}${step.title ? `: ${step.title}` : ''}` : ''}
       </p>
 
-      <div className="overflow-x-clip px-5 py-6 sm:px-8">
+      <div className="mt-5 overflow-x-clip">
         <div key={stepKey ?? 'empty'} className={transition}>
           {step && (
             <>
-              <div ref={bodyRef} tabIndex={-1} className="mb-6 outline-none">
-                {step.title && <h2 className="text-xl font-semibold tracking-tight text-slate-900">{step.title}</h2>}
-                {step.intro && <p className="mt-1 text-sm leading-relaxed text-slate-600">{step.intro}</p>}
+              <div ref={bodyRef} tabIndex={-1} className="mb-4 outline-none">
+                {isFirst && config.description && (
+                  <p className="mb-2 text-xs leading-relaxed text-slate-500">{config.description}</p>
+                )}
+                {step.title && <h2 className="text-lg font-semibold tracking-tight text-slate-900">{step.title}</h2>}
+                {step.intro && <p className="mt-0.5 text-sm leading-relaxed text-slate-600">{step.intro}</p>}
               </div>
               <FormRenderer
                 components={step.components}
@@ -125,9 +116,9 @@ export function SteppedForm({ config, filler, flow, onSubmit, submitting = false
           )}
         </div>
 
-        {notice && <div className="mt-6">{notice}</div>}
+        {notice && <div className="mt-4">{notice}</div>}
 
-        <Button type="submit" size="lg" loading={submitting} className="mt-8 w-full">
+        <Button type="submit" size="lg" loading={submitting} className="mt-6 w-full">
           {isLast ? 'Submit' : 'Next'}
         </Button>
       </div>

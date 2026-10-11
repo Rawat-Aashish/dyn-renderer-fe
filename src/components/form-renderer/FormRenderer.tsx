@@ -17,7 +17,7 @@ interface FormRendererProps {
 /** Turns components into working inputs. It only displays; the answers and checks live in useFormFiller. */
 export function FormRenderer({ components, answers, states, errors, onChange, onBlur }: FormRendererProps) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {components.map((component) => {
         const state = states.get(component.fieldCode)
         if (!state?.visible) return null

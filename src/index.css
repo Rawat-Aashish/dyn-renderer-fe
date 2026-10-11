@@ -5,12 +5,13 @@
   --color-brand-50: var(--color-blue-50);
   --color-brand-100: var(--color-blue-100);
   --color-brand-200: var(--color-blue-200);
+  --color-brand-300: var(--color-blue-300);
   --color-brand-500: var(--color-blue-500);
   --color-brand-600: var(--color-blue-600);
   --color-brand-700: var(--color-blue-700);
   --color-brand-950: var(--color-blue-950);
 
-  /* Shared controls use accent-*: blue by default, teal inside a .theme-teal wrapper (the visitor's form). */
+  /* Shared controls use accent-*: the admin blue by default, a soft steel blue inside .theme-sky (the visitor's form). */
   --color-accent-50: var(--color-blue-50);
   --color-accent-100: var(--color-blue-100);
   --color-accent-200: var(--color-blue-200);
@@ -23,17 +24,56 @@
   --color-accent-950: var(--color-blue-950);
 }
 
-.theme-teal {
-  --color-accent-50: var(--color-teal-50);
-  --color-accent-100: var(--color-teal-100);
-  --color-accent-200: var(--color-teal-200);
-  --color-accent-300: var(--color-teal-300);
-  --color-accent-400: var(--color-teal-400);
-  --color-accent-500: var(--color-teal-500);
-  --color-accent-600: var(--color-teal-600);
-  --color-accent-700: var(--color-teal-700);
-  --color-accent-800: var(--color-teal-800);
-  --color-accent-950: var(--color-teal-950);
+/* Built around #7bb4cc (400). 600 is the darkest step that still gives white text at least 4.5:1 contrast. */
+.theme-sky {
+  --color-accent-50: #f3f9fc;
+  --color-accent-100: #e3f0f7;
+  --color-accent-200: #c9e1ee;
+  --color-accent-300: #a5cde0;
+  --color-accent-400: #7bb4cc;
+  --color-accent-500: #4a93b5;
+  --color-accent-600: #2b7599;
+  --color-accent-700: #235e7a;
+  --color-accent-800: #1c4a5f;
+  --color-accent-950: #0f2733;
+}
+
+/* The visitor's page: a pale wash with soft glows of #7bb4cc in two opposite corners. */
+.form-backdrop {
+  background-color: #f4f8fb;
+  background-image:
+    radial-gradient(64rem 40rem at 0% 0%, #7bb4cc66 0%, #7bb4cc1c 45%, #0000 72%),
+    radial-gradient(56rem 36rem at 100% 100%, #7bb4cc4d 0%, #7bb4cc14 45%, #0000 72%);
+  background-attachment: fixed;
+}
+
+/* One continuous bar: it grows and shrinks as the visitor moves, light at its start and deeper at its end. */
+.form-progress {
+  appearance: none;
+  -webkit-appearance: none;
+  display: block;
+  width: 100%;
+  height: 0.375rem;
+  border: 0;
+  border-radius: 9999px;
+  overflow: hidden;
+  background-color: var(--color-slate-200);
+}
+
+.form-progress::-webkit-progress-bar {
+  background-color: var(--color-slate-200);
+  border-radius: 9999px;
+}
+
+.form-progress::-webkit-progress-value {
+  border-radius: 9999px;
+  background-image: linear-gradient(to right, var(--color-accent-200), var(--color-accent-600));
+  transition: width 0.45s ease;
+}
+
+.form-progress::-moz-progress-bar {
+  border-radius: 9999px;
+  background-image: linear-gradient(to right, var(--color-accent-200), var(--color-accent-600));
 }
 
 /* Number fields are typed into, not nudged: no spinner buttons. */
@@ -102,6 +142,10 @@ input[type='number']::-webkit-outer-spin-button {
   .step-in-forward,
   .step-in-back {
     animation: none;
+  }
+
+  .form-progress::-webkit-progress-value {
+    transition: none;
   }
 
   .success-circle,

@@ -30,8 +30,8 @@ async function loadSession(code: string): Promise<StoredSession> {
 
 function Page({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-accent-50 px-4 py-6 sm:py-12">
-      <div className="mx-auto w-full max-w-xl">{children}</div>
+    <div className="form-backdrop min-h-screen px-4 py-5 sm:py-8">
+      <div className="mx-auto w-full max-w-lg">{children}</div>
     </div>
   )
 }
@@ -156,7 +156,7 @@ function FormBody({ code, session, onSubmitted, onEnded }: BodyProps) {
 }
 
 export function PublicFormPage() {
-  useAccentTheme('theme-teal')
+  useAccentTheme('theme-sky')
   const { code = '' } = useParams()
   const queryClient = useQueryClient()
   const [submitted, setSubmitted] = useState(false)

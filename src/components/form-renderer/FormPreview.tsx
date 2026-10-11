@@ -17,7 +17,7 @@ interface FormPreviewProps {
 
 /** The form exactly as a visitor will fill it in. Submit runs the checks and reports the result; nothing is sent. */
 export function FormPreview({ config, backTo, source }: FormPreviewProps) {
-  useAccentTheme('theme-teal')
+  useAccentTheme('theme-sky')
   const [passed, setPassed] = useState(false)
   const filler = useFormFiller(config)
   const flow = useStepFlow(config, filler)
@@ -28,7 +28,7 @@ export function FormPreview({ config, backTo, source }: FormPreviewProps) {
         ← Back
       </Link>
 
-      <div className="mx-auto mt-4 max-w-xl">
+      <div className="mx-auto mt-4 max-w-lg">
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <Badge tone="amber">Preview</Badge>
           <span className="text-sm text-slate-600">Showing the {source}. Nothing you enter here is sent anywhere.</span>

@@ -16,7 +16,7 @@ interface ChoiceTileProps {
 export function ChoiceTile({ kind, label, checked, disabled, name, onChange, plain }: ChoiceTileProps) {
   const surface = plain
     ? 'rounded-md px-2 py-1.5 hover:bg-accent-50'
-    : 'rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 hover:border-accent-300 has-[:checked]:border-accent-500 has-[:checked]:bg-accent-50'
+    : 'rounded-lg border border-slate-200 bg-white px-3 py-2 hover:border-accent-300 has-[:checked]:border-accent-500 has-[:checked]:bg-accent-50'
 
   return (
     <label

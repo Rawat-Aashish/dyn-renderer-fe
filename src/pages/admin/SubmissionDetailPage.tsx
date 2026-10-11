@@ -4,21 +4,40 @@ import { ApiError, messageOf } from '../../api/client'
 import { Badge } from '../../components/ui/Badge'
 import { ErrorState, Spinner } from '../../components/ui/StateViews'
 import { isEmpty, walk } from '../../lib/form-logic/answers.ts'
+import { evaluateStates } from '../../lib/form-logic/evaluate.ts'
 import { formatDateTime } from '../../lib/format'
 import { formatAnswer } from '../../lib/format-answer'
 import { getSubmission } from '../../services/submission.service'
 import { getVersion } from '../../services/version.service'
 import type { Configuration, FormComponent } from '../../types/form'
 
-function AnswerRow({ label, children }: { label: string; code: string; children: React.ReactNode }) {
-  return (
+// Static class names so Tailwind can see them: how far a follow-up question is set in from its parent.
+const INDENT = ['', 'ml-6', 'ml-12', 'ml-16']
+
+interface AnswerRowProps {
+  label: string
+  code: string
+  children: React.ReactNode
+  /** 0 for an ordinary question; 1 or more for a question that only appears because of an earlier answer. */
+  depth?: number
+  /** The question this one follows up on. */
+  followUpOf?: string
+}
+
+function AnswerRow({ label, children, depth = 0, followUpOf }: AnswerRowProps) {
+  const row = (
     <div className="grid gap-1 px-5 py-3 sm:grid-cols-[14rem_minmax(0,1fr)] sm:gap-4">
       <dt className="text-sm text-slate-600">
         <span className="font-medium text-slate-800">{label}</span>
+        {followUpOf && <span className="mt-0.5 block text-xs text-slate-500">Follow-up to “{followUpOf}”</span>}
         {/* <span className="block font-mono text-xs text-slate-500">{code}</span> */}
       </dt>
       <dd className="min-w-0 text-sm whitespace-pre-wrap text-slate-900">{children}</dd>
     </div>
+  )
+  if (depth === 0) return row
+  return (
+    <div className={`${INDENT[Math.min(depth, INDENT.length - 1)]} border-l-2 border-brand-300 bg-brand-50/50`}>{row}</div>
   )
 }
 
@@ -63,10 +82,30 @@ export function SubmissionDetailPage() {
   const known = new Set(nodes.map((node) => node.component.fieldCode))
   const unknownKeys = Object.keys(submission.data).filter((key) => !known.has(key))
 
+  // Which questions the visitor actually got: a follow-up whose condition was not met was never shown, so it is
+  // not listed as "Not answered". The stored answers are the same shape the renderer's logic reads.
+  const states = configuration ? evaluateStates(configuration, submission.data) : new Map()
+  const byCode = new Map(nodes.map((node) => [node.component.fieldCode, node.component]))
+  const visibilityConditionOf = (code: string) =>
+    configuration?.conditions.find(
+      (condition) => condition.targetFieldCode === code && (condition.action === 'SHOW' || condition.action === 'HIDE'),
+    )
+  const depthOf = (code: string, seen: string[] = []): number => {
+    const condition = visibilityConditionOf(code)
+    const source = condition?.rules[0]?.sourceFieldCode
+    if (!source || seen.includes(code)) return 0
+    return 1 + depthOf(source, [...seen, code])
+  }
+
   function renderComponent(component: FormComponent) {
     if (component.componentType === 'HEADING') return null
+    if (!states.get(component.fieldCode)?.visible) return null
 
     if (component.componentType === 'SECTION') {
+      const shown = component.children.filter(
+        (child) => child.componentType !== 'HEADING' && states.get(child.fieldCode)?.visible,
+      )
+      if (shown.length === 0) return null
       return (
         <div key={component.id}>
           <h3 className="bg-sky-200 px-5 py-2 text-xs font-semibold tracking-wide text-slate-600 uppercase">
@@ -78,8 +117,16 @@ export function SubmissionDetailPage() {
     }
 
     const value = submission.data[component.fieldCode]
+    const depth = depthOf(component.fieldCode)
+    const parentCode = visibilityConditionOf(component.fieldCode)?.rules[0]?.sourceFieldCode
     return (
-      <AnswerRow key={component.id} label={component.fieldLabel} code={component.fieldCode}>
+      <AnswerRow
+        key={component.id}
+        label={component.fieldLabel}
+        code={component.fieldCode}
+        depth={depth}
+        followUpOf={depth > 0 && parentCode ? byCode.get(parentCode)?.fieldLabel : undefined}
+      >
         {isEmpty(value) ? <span className="text-slate-400">Not answered</span> : formatAnswer(component, value)}
       </AnswerRow>
     )
