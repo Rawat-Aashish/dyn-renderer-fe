@@ -25,7 +25,7 @@ function ruleLabel(ruleType: RuleType, componentType: ComponentType): string {
 
 function ruleHelp(ruleType: RuleType): string | undefined {
   if (ruleType === 'REGEX') {
-    return 'A regular expression in the server’s (Java) syntax. It is checked when the form is submitted, not while the visitor types.'
+    return 'A regular expression in the server’s (Java) syntax; the answer must match all of it. Patterns the browser cannot read are checked by the server when the form is submitted.'
   }
   if (ruleType === 'MIN_LENGTH' || ruleType === 'MAX_LENGTH') return 'A whole number, 0 or more.'
   return undefined

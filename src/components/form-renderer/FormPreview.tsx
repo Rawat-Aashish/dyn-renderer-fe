@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAccentTheme } from '../../hooks/useAccentTheme'
 import { useFormFiller } from '../../hooks/useFormFiller'
-import { flattenComponents } from '../../lib/component-meta'
+import { useStepFlow } from '../../hooks/useStepFlow'
 import type { Configuration } from '../../types/form'
 import { Badge } from '../ui/Badge'
-import { Button } from '../ui/Button'
 import { Alert } from '../ui/StateViews'
-import { FormRenderer } from './FormRenderer'
+import { SteppedForm } from './SteppedForm'
 
 interface FormPreviewProps {
   config: Configuration
@@ -15,13 +15,12 @@ interface FormPreviewProps {
   source: string
 }
 
-/** The form as a visitor will see it. Submit runs the checks and reports the result; nothing is sent. */
+/** The form exactly as a visitor will fill it in. Submit runs the checks and reports the result; nothing is sent. */
 export function FormPreview({ config, backTo, source }: FormPreviewProps) {
-  const filler = useFormFiller(config)
+  useAccentTheme('theme-teal')
   const [passed, setPassed] = useState(false)
-  const hasPattern = flattenComponents(config.components).some((component) =>
-    component.validationRules.some((rule) => rule.ruleType === 'REGEX'),
-  )
+  const filler = useFormFiller(config)
+  const flow = useStepFlow(config, filler)
 
   return (
     <div>
@@ -29,44 +28,28 @@ export function FormPreview({ config, backTo, source }: FormPreviewProps) {
         ← Back
       </Link>
 
-      <div className="mx-auto mt-4 max-w-2xl">
+      <div className="mx-auto mt-4 max-w-xl">
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <Badge tone="amber">Preview</Badge>
           <span className="text-sm text-slate-600">Showing the {source}. Nothing you enter here is sent anywhere.</span>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <form
-            noValidate
-            onSubmit={(event) => {
-              event.preventDefault()
-              setPassed(filler.attemptSubmit() !== null)
-            }}
-            className="space-y-6"
-          >
-            <FormRenderer
-              config={config}
-              answers={filler.answers}
-              states={filler.states}
-              errors={filler.errors}
-              onChange={(code, value) => {
-                setPassed(false)
-                filler.setAnswer(code, value)
-              }}
-              onBlur={filler.touch}
-            />
-
-            {hasPattern && (
-              <Alert tone="info">
-                This form has pattern rules. Patterns are checked by the server when a form is really submitted, so this
-                preview cannot report them.
-              </Alert>
-            )}
-            {passed && <Alert tone="success">These answers would pass the checks. Nothing was sent.</Alert>}
-
-            <Button type="submit">Submit</Button>
-          </form>
-        </div>
+        <SteppedForm
+          config={config}
+          filler={{
+            ...filler,
+            // Any edit makes an earlier "would pass" result out of date.
+            setAnswer: (code, value) => {
+              setPassed(false)
+              filler.setAnswer(code, value)
+            },
+          }}
+          flow={flow}
+          onSubmit={() => setPassed(flow.submit() !== null)}
+          notice={
+            passed ? <Alert tone="success">These answers would pass the checks. Nothing was sent.</Alert> : undefined
+          }
+        />
       </div>
     </div>
   )

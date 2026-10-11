@@ -1,19 +1,26 @@
 import type { ButtonHTMLAttributes } from 'react'
 
 const VARIANTS = {
-  primary: 'bg-brand-600 text-white shadow-sm hover:bg-brand-700',
+  primary: 'bg-accent-600 text-white shadow-sm hover:bg-accent-700',
   secondary: 'border border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50',
   danger: 'bg-red-600 text-white shadow-sm hover:bg-red-700',
 }
 
+const SIZES = {
+  md: 'px-4 py-2 text-sm',
+  lg: 'px-6 py-3 text-base',
+}
+
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: keyof typeof VARIANTS
+  size?: keyof typeof SIZES
   /** disables the button and shows a spinner while its request is in flight */
   loading?: boolean
 }
 
 export function Button({
   variant = 'primary',
+  size = 'md',
   loading = false,
   type = 'button',
   disabled,
@@ -26,7 +33,7 @@ export function Button({
       type={type}
       disabled={disabled || loading}
       aria-busy={loading}
-      className={`inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:opacity-50 ${VARIANTS[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600 disabled:cursor-not-allowed disabled:opacity-50 ${SIZES[size]} ${VARIANTS[variant]} ${className}`}
       {...rest}
     >
       {loading && (

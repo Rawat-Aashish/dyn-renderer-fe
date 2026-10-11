@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Option } from '../../types/form'
+import { ChoiceTile } from './ChoiceTile'
 import { controlClass } from './control-class'
 
 interface MultiSelectProps {
@@ -65,12 +66,12 @@ export function MultiSelect({
         aria-invalid={invalid ? true : undefined}
         aria-describedby={describedBy}
         onClick={() => setOpen((current) => !current)}
-        className={`${controlClass(Boolean(invalid))} flex min-h-[2.375rem] items-center justify-between gap-2 text-left`}
+        className={`${controlClass(Boolean(invalid))} flex min-h-[2.75rem] cursor-pointer items-center justify-between gap-2 text-left disabled:cursor-not-allowed`}
       >
-        <span className="flex flex-wrap gap-1">
+        <span className="flex flex-wrap gap-1.5">
           {selected.length > 0 ? (
             selected.map((option) => (
-              <span key={option.value} className="rounded bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">
+              <span key={option.value} className="rounded-md bg-accent-100 px-2 py-0.5 text-xs font-medium text-accent-800">
                 {option.label}
               </span>
             ))
@@ -79,27 +80,23 @@ export function MultiSelect({
           )}
         </span>
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" className="size-4 shrink-0 text-slate-500">
-          <path d="m5 8 5 5 5-5" />
+          <path d="m5 8 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
       {open && (
-        <div className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border border-slate-200 bg-white p-1 shadow-md">
+        <div className="absolute z-20 mt-1.5 max-h-64 w-full overflow-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg">
           {options.length === 0 ? (
             <p className="px-2 py-1.5 text-sm text-slate-500">No options yet</p>
           ) : (
             options.map((option, index) => (
-              <label
+              <ChoiceTile
                 key={`${option.value}-${index}`}
-                className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-slate-800 hover:bg-brand-50"
-              >
-                <input
-                  type="checkbox"
-                  checked={value.includes(option.value)}
-                  onChange={() => toggle(option.value)}
-                  className="size-4 rounded border-slate-300 accent-brand-600"
-                />
-                {option.label}
-              </label>
+                kind="checkbox"
+                plain
+                label={option.label}
+                checked={value.includes(option.value)}
+                onChange={() => toggle(option.value)}
+              />
             ))
           )}
         </div>

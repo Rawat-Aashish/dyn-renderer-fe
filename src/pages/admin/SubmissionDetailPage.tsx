@@ -10,12 +10,12 @@ import { getSubmission } from '../../services/submission.service'
 import { getVersion } from '../../services/version.service'
 import type { Configuration, FormComponent } from '../../types/form'
 
-function AnswerRow({ label, code, children }: { label: string; code: string; children: React.ReactNode }) {
+function AnswerRow({ label, children }: { label: string; code: string; children: React.ReactNode }) {
   return (
     <div className="grid gap-1 px-5 py-3 sm:grid-cols-[14rem_minmax(0,1fr)] sm:gap-4">
       <dt className="text-sm text-slate-600">
         <span className="font-medium text-slate-800">{label}</span>
-        <span className="block font-mono text-xs text-slate-500">{code}</span>
+        {/* <span className="block font-mono text-xs text-slate-500">{code}</span> */}
       </dt>
       <dd className="min-w-0 text-sm whitespace-pre-wrap text-slate-900">{children}</dd>
     </div>
@@ -69,7 +69,7 @@ export function SubmissionDetailPage() {
     if (component.componentType === 'SECTION') {
       return (
         <div key={component.id}>
-          <h3 className="bg-slate-50 px-5 py-2 text-xs font-semibold tracking-wide text-slate-600 uppercase">
+          <h3 className="bg-sky-200 px-5 py-2 text-xs font-semibold tracking-wide text-slate-600 uppercase">
             {component.fieldLabel}
           </h3>
           <div className="divide-y divide-slate-100">{component.children.map(renderComponent)}</div>

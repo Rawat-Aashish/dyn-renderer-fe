@@ -1,5 +1,7 @@
 import type { ComponentType, Option } from '../../types/form'
+import { ChoiceTile } from '../ui/ChoiceTile'
 import { controlClass } from '../ui/control-class'
+import { ListboxSelect } from '../ui/ListboxSelect'
 import { MultiSelect } from '../ui/MultiSelect'
 
 export interface FieldControlProps {
@@ -42,6 +44,11 @@ export function FieldControl({
     'aria-describedby': describedBy,
   }
   const className = controlClass(Boolean(invalid))
+
+  // A group counts as "left" only when focus moves outside it, not on every arrow key between its options.
+  const groupBlur = (event: React.FocusEvent<HTMLDivElement>) => {
+    if (!event.currentTarget.contains(event.relatedTarget)) onBlur?.()
+  }
 
   switch (type) {
     case 'TEXT':
@@ -88,6 +95,11 @@ export function FieldControl({
           placeholder={placeholder ?? undefined}
           disabled={disabled}
           onChange={(event) => onChange(event.target.value)}
+          // A number is typed, not nudged: the arrow keys and the mouse wheel must not change it.
+          onKeyDown={(event) => {
+            if (event.key === 'ArrowUp' || event.key === 'ArrowDown') event.preventDefault()
+          }}
+          onWheel={(event) => event.currentTarget.blur()}
           onBlur={onBlur}
           className={className}
           {...ariaProps}
@@ -104,29 +116,27 @@ export function FieldControl({
           disabled={disabled}
           onChange={(event) => onChange(event.target.value)}
           onBlur={onBlur}
-          className={className}
+          className={`${className} cursor-pointer`}
           {...ariaProps}
         />
       )
 
     case 'DROPDOWN':
       return (
-        <select
+        <ListboxSelect
           id={id}
           value={asString(value)}
+          options={options}
+          placeholder={placeholder}
           disabled={disabled}
-          onChange={(event) => onChange(event.target.value)}
-          onBlur={onBlur}
-          className={className}
-          {...ariaProps}
-        >
-          <option value="">{placeholder || 'Select…'}</option>
-          {options.map((option, index) => (
-            <option key={`${option.value}-${index}`} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+          invalid={invalid}
+          describedBy={describedBy}
+          onChange={(next) => {
+            onChange(next)
+            // Choosing is leaving the field: show its message now, not when the focus happens to move.
+            onBlur?.()
+          }}
+        />
       )
 
     case 'MULTISELECT':
@@ -146,76 +156,81 @@ export function FieldControl({
 
     case 'RADIO':
       return (
-        <div id={id} role="radiogroup" aria-labelledby={`${id}-label`} {...ariaProps} className="space-y-2">
+        <div
+          id={id}
+          role="radiogroup"
+          aria-labelledby={`${id}-label`}
+          onBlur={groupBlur}
+          {...ariaProps}
+          className="space-y-2"
+        >
           {options.length === 0 && <p className="text-sm text-slate-500">No options yet</p>}
           {options.map((option, index) => (
-            <label key={`${option.value}-${index}`} className="flex cursor-pointer items-center gap-2 text-sm text-slate-800">
-              <input
-                type="radio"
-                name={id}
-                checked={asString(value) === option.value}
-                disabled={disabled}
-                onChange={() => onChange(option.value)}
-                onBlur={onBlur}
-                className="size-4 border-slate-300 accent-brand-600"
-              />
-              {option.label}
-            </label>
+            <ChoiceTile
+              key={`${option.value}-${index}`}
+              kind="radio"
+              name={id}
+              label={option.label}
+              checked={asString(value) === option.value}
+              disabled={disabled}
+              onChange={() => onChange(option.value)}
+            />
           ))}
           {clearable && asString(value) !== '' && !disabled && (
-            <button type="button" onClick={() => onChange('')} className="text-xs font-medium text-brand-700 hover:underline">
+            <button type="button" onClick={() => onChange('')} className="text-xs font-medium text-accent-700 hover:underline">
               Clear
             </button>
           )}
         </div>
       )
 
-    case 'CHECKBOX':
+    case 'CHECKBOX': {
+      const chosen = asStrings(value)
       return (
-        <div id={id} role="group" aria-labelledby={`${id}-label`} {...ariaProps} className="space-y-2">
+        <div id={id} role="group" aria-labelledby={`${id}-label`} onBlur={groupBlur} {...ariaProps} className="space-y-2">
           {options.length === 0 && <p className="text-sm text-slate-500">No options yet</p>}
-          {options.map((option, index) => {
-            const chosen = asStrings(value)
-            return (
-              <label key={`${option.value}-${index}`} className="flex cursor-pointer items-center gap-2 text-sm text-slate-800">
-                <input
-                  type="checkbox"
-                  checked={chosen.includes(option.value)}
-                  disabled={disabled}
-                  onChange={() =>
-                    onChange(chosen.includes(option.value) ? chosen.filter((v) => v !== option.value) : [...chosen, option.value])
-                  }
-                  onBlur={onBlur}
-                  className="size-4 rounded border-slate-300 accent-brand-600"
-                />
-                {option.label}
-              </label>
-            )
-          })}
+          {options.map((option, index) => (
+            <ChoiceTile
+              key={`${option.value}-${index}`}
+              kind="checkbox"
+              label={option.label}
+              checked={chosen.includes(option.value)}
+              disabled={disabled}
+              onChange={() =>
+                onChange(chosen.includes(option.value) ? chosen.filter((v) => v !== option.value) : [...chosen, option.value])
+              }
+            />
+          ))}
         </div>
       )
+    }
 
     case 'TOGGLE': {
       const on = value === true
       return (
-        <button
-          id={id}
-          type="button"
-          role="switch"
-          aria-checked={on}
-          disabled={disabled}
-          onClick={() => onChange(!on)}
-          onBlur={onBlur}
-          {...ariaProps}
-          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:opacity-50 ${
-            on ? 'bg-brand-600' : 'bg-slate-300'
-          }`}
-        >
-          <span
-            aria-hidden="true"
-            className={`inline-block size-5 rounded-full bg-white shadow-sm transition-transform duration-150 ${on ? 'translate-x-5.5' : 'translate-x-0.5'}`}
-          />
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            id={id}
+            type="button"
+            role="switch"
+            aria-checked={on}
+            disabled={disabled}
+            onClick={() => onChange(!on)}
+            onBlur={onBlur}
+            {...ariaProps}
+            className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600 disabled:cursor-not-allowed disabled:opacity-50 ${
+              on ? 'bg-accent-600' : 'bg-slate-300'
+            }`}
+          >
+            <span
+              aria-hidden="true"
+              className={`inline-block size-5 rounded-full bg-white shadow-sm transition-transform duration-150 ${on ? 'translate-x-6.5' : 'translate-x-1'}`}
+            />
+          </button>
+          <span aria-hidden="true" className="text-sm text-slate-600">
+            {on ? 'On' : 'Off'}
+          </span>
+        </div>
       )
     }
 

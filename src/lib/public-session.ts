@@ -8,6 +8,10 @@ export interface StoredSession {
   configuration: Configuration
   answers: Answers
   submitted: boolean
+  /** Key of the step the visitor was on; absent in entries saved before steps existed. */
+  step?: string
+  /** Keys of the steps the visitor has reached. */
+  reached?: string[]
 }
 
 const keyFor = (code: string) => `public_form:${code}`
@@ -27,6 +31,15 @@ export function writeStored(code: string, session: StoredSession): void {
   } catch {
     // Storage full or blocked: the form still works, it just cannot survive a refresh.
   }
+}
+
+/**
+ * Merges changes into what is stored right now. Reading first means a write about the step cannot undo a
+ * write about the answers (or the other way round), and an entry that was cleared is not brought back.
+ */
+export function patchStored(code: string, patch: Partial<StoredSession>): void {
+  const current = readStored(code)
+  if (current) writeStored(code, { ...current, ...patch })
 }
 
 export function clearStored(code: string): void {

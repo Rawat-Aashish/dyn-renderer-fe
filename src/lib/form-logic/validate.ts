@@ -15,6 +15,7 @@ const DECIMAL_TEXT = /^-?\d+(\.\d+)?$/
 
 const REQUIRED = 'This field is required'
 const NOT_AN_OPTION = 'Must be one of the available options'
+const NOT_IN_FORMAT = 'Is not in the expected format'
 
 function decimalPlacesOf(numeric: number): number {
   const text = String(numeric)
@@ -65,6 +66,54 @@ function formatError(component: FormComponent, value: unknown): string | null {
   }
 }
 
+// Letter escapes JavaScript understands. Any other (\A, \Z, \h, \R, \Q ...) is Java-only and would silently
+// mean the plain letter in a non-unicode JS pattern, so such a pattern is left to the server.
+const JS_LETTER_ESCAPES = new Set('dDwWsSbBnrtfvcxuk'.split(''))
+
+const compiled = new Map<string, RegExp | null>()
+
+/**
+ * The server uses Java's full-match semantics, so the pattern must match the whole answer.
+ * Returns null when the pattern cannot be reproduced faithfully in JavaScript; the server then decides.
+ */
+function compilePattern(source: string): RegExp | null {
+  const known = compiled.get(source)
+  if (known !== undefined) return known
+
+  let body = source
+  let flags = ''
+  const leading = /^\(\?([a-zA-Z]+)\)/.exec(source)
+  if (leading) {
+    // Only i and s translate faithfully; (?x) comments and (?m) multi-line anchors do not.
+    if (![...leading[1]].every((flag) => flag === 'i' || flag === 's')) {
+      compiled.set(source, null)
+      return null
+    }
+    flags = leading[1]
+    body = source.slice(leading[0].length)
+  }
+
+  const wrapped = `^(?:${body})$`
+  let regex: RegExp | null = null
+  try {
+    regex = new RegExp(wrapped, `${flags}u`)
+  } catch {
+    // Without the unicode flag \p{..} would match literal text, so only retry when the pattern has nothing
+    // JavaScript would read differently from Java.
+    const letters = [...body.matchAll(/\\([A-Za-z])/g)].map((match) => match[1])
+    if (letters.every((letter) => JS_LETTER_ESCAPES.has(letter))) {
+      try {
+        regex = new RegExp(wrapped, flags)
+      } catch {
+        regex = null
+      }
+    }
+  }
+
+  compiled.set(source, regex)
+  return regex
+}
+
 function ruleError(rule: ValidationRule, value: unknown): string | null {
   const own = rule.errorMessage || null
   const text = typeof value === 'string' ? value : ''
@@ -81,8 +130,10 @@ function ruleError(rule: ValidationRule, value: unknown): string | null {
       return Date.parse(text) < Date.parse(rule.ruleValue) ? (own ?? `Must be on or after ${rule.ruleValue}`) : null
     case 'DATE_MAX':
       return Date.parse(text) > Date.parse(rule.ruleValue) ? (own ?? `Must be on or before ${rule.ruleValue}`) : null
-    // Patterns are written for the Java server and are never checked in the browser.
-    case 'REGEX':
+    case 'REGEX': {
+      const pattern = compilePattern(rule.ruleValue)
+      return pattern && !pattern.test(text) ? (own ?? NOT_IN_FORMAT) : null
+    }
     default:
       return null
   }

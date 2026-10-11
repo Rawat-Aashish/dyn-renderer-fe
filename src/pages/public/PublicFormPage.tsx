@@ -2,12 +2,14 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import { ApiError, GENERIC_ERROR } from '../../api/client'
-import { FormRenderer } from '../../components/form-renderer/FormRenderer'
+import { SteppedForm } from '../../components/form-renderer/SteppedForm'
 import { Button } from '../../components/ui/Button'
 import { Alert, Spinner } from '../../components/ui/StateViews'
+import { useAccentTheme } from '../../hooks/useAccentTheme'
 import { useFormFiller } from '../../hooks/useFormFiller'
+import { useStepFlow, type StepFlowState } from '../../hooks/useStepFlow'
 import { initialAnswers, type Answers } from '../../lib/form-logic/answers.ts'
-import { clearStored, readStored, writeStored, type StoredSession } from '../../lib/public-session'
+import { clearStored, patchStored, readStored, writeStored, type StoredSession } from '../../lib/public-session'
 import { startSubmission, submitAnswers } from '../../services/public.service'
 
 /** A new token is requested only when this tab has nothing stored for the form. */
@@ -28,7 +30,7 @@ async function loadSession(code: string): Promise<StoredSession> {
 
 function Page({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-brand-50 px-4 py-6 sm:py-12">
+    <div className="min-h-screen bg-accent-50 px-4 py-6 sm:py-12">
       <div className="mx-auto w-full max-w-xl">{children}</div>
     </div>
   )
@@ -37,7 +39,7 @@ function Page({ children }: { children: ReactNode }) {
 function Notice({ title, message, action }: { title: string; message: string; action?: ReactNode }) {
   return (
     <Page>
-      <div role="alert" className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm sm:p-10">
+      <div role="alert" className="rounded-2xl bg-white p-6 text-center shadow-lg ring-1 ring-slate-200 sm:p-10">
         <h1 className="text-xl font-semibold tracking-tight text-slate-900">{title}</h1>
         <p className="mt-2 text-sm leading-relaxed text-slate-600">{message}</p>
         {action && <div className="mt-6">{action}</div>}
@@ -49,8 +51,8 @@ function Notice({ title, message, action }: { title: string; message: string; ac
 function ThankYou({ name }: { name: string }) {
   return (
     <Page>
-      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm sm:p-12">
-        <svg viewBox="0 0 52 52" fill="none" aria-hidden="true" className="mx-auto size-24 text-emerald-600">
+      <div className="rounded-2xl bg-white p-8 text-center shadow-lg ring-1 ring-slate-200 sm:p-12">
+        <svg viewBox="0 0 52 52" fill="none" aria-hidden="true" className="mx-auto size-24 text-accent-600">
           <circle className="success-circle" cx="26" cy="26" r="25" stroke="currentColor" strokeWidth="2" />
           <path
             className="success-check"
@@ -82,13 +84,16 @@ interface BodyProps {
 function FormBody({ code, session, onSubmitted, onEnded }: BodyProps) {
   const { configuration } = session
 
-  const persist = useCallback(
-    (answers: Answers) => writeStored(code, { ...session, answers }),
-    [code, session],
-  )
+  const persistAnswers = useCallback((answers: Answers) => patchStored(code, { answers }), [code])
+  const persistStep = useCallback((state: StepFlowState) => patchStored(code, state), [code])
+
   const filler = useFormFiller(configuration, {
     initialAnswers: { ...initialAnswers(configuration), ...session.answers },
-    onAnswersChange: persist,
+    onAnswersChange: persistAnswers,
+  })
+  const flow = useStepFlow(configuration, filler, {
+    initial: { step: session.step, reached: session.reached },
+    onChange: persistStep,
   })
   const [submitting, setSubmitting] = useState(false)
   const [general, setGeneral] = useState<string | null>(null)
@@ -98,13 +103,13 @@ function FormBody({ code, session, onSubmitted, onEnded }: BodyProps) {
   }, [configuration.name])
 
   async function handleSubmit() {
-    const payload = filler.attemptSubmit()
+    const payload = flow.submit()
     if (!payload) return
     setSubmitting(true)
     setGeneral(null)
     try {
       await submitAnswers(code, session.token, payload)
-      writeStored(code, { ...session, answers: filler.answers, submitted: true })
+      patchStored(code, { answers: filler.answers, submitted: true })
       onSubmitted()
     } catch (error) {
       if (!(error instanceof ApiError)) {
@@ -114,11 +119,14 @@ function FormBody({ code, session, onSubmitted, onEnded }: BodyProps) {
         const shown = new Set(
           [...filler.states.entries()].filter(([, state]) => state.visible).map(([fieldCode]) => fieldCode),
         )
-        const unmatched = Object.entries(error.errors).filter(([key]) => !shown.has(key))
-        if (unmatched.length > 0) setGeneral(unmatched.map(([, message]) => message).join(' '))
+        const keys = Object.keys(error.errors)
+        const firstShown = keys.find((key) => shown.has(key))
+        if (firstShown) flow.reveal(firstShown)
+        const unmatched = keys.filter((key) => !shown.has(key))
+        if (unmatched.length > 0) setGeneral(unmatched.map((key) => error.errors![key]).join(' '))
       } else if (error.status === 409) {
         // The server already holds this submission, so the visitor is done.
-        writeStored(code, { ...session, answers: filler.answers, submitted: true })
+        patchStored(code, { answers: filler.answers, submitted: true })
         onSubmitted()
       } else if (error.status === 404) {
         onEnded('lost')
@@ -135,32 +143,20 @@ function FormBody({ code, session, onSubmitted, onEnded }: BodyProps) {
 
   return (
     <Page>
-      <form
-        noValidate
-        onSubmit={(event) => {
-          event.preventDefault()
-          void handleSubmit()
-        }}
-        className="space-y-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8"
-      >
-        <FormRenderer
-          config={configuration}
-          answers={filler.answers}
-          states={filler.states}
-          errors={filler.errors}
-          onChange={filler.setAnswer}
-          onBlur={filler.touch}
-        />
-        {general && <Alert>{general}</Alert>}
-        <Button type="submit" loading={submitting} className="w-full sm:w-auto">
-          Submit
-        </Button>
-      </form>
+      <SteppedForm
+        config={configuration}
+        filler={filler}
+        flow={flow}
+        onSubmit={() => void handleSubmit()}
+        submitting={submitting}
+        notice={general ? <Alert>{general}</Alert> : undefined}
+      />
     </Page>
   )
 }
 
 export function PublicFormPage() {
+  useAccentTheme('theme-teal')
   const { code = '' } = useParams()
   const queryClient = useQueryClient()
   const [submitted, setSubmitted] = useState(false)
