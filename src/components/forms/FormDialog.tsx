@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { fieldErrorsOf, messageOf } from '../../api/client'
 import { formKey } from '../../hooks/useFormDetail'
 import { toFormCode } from '../../lib/format'
-import { createForm, updateForm } from '../../services/form.service'
+import { cloneForm, createForm, updateForm } from '../../services/form.service'
 import type { Form } from '../../types/form'
 import { Button } from '../ui/Button'
 import { Dialog } from '../ui/Dialog'
@@ -17,28 +17,33 @@ interface FormDialogProps {
   onClose: () => void
   /** Present when editing; the code is then shown but locked. */
   form?: Form
+  /** Present when cloning: a new form is made from this one's fields, rules and conditions. */
+  cloneOf?: Form
 }
 
-export function FormDialog({ open, onClose, form }: FormDialogProps) {
+export function FormDialog({ open, onClose, form, cloneOf }: FormDialogProps) {
+  const title = cloneOf ? 'Clone form' : form ? 'Edit form details' : 'New form'
   return (
-    <Dialog open={open} title={form ? 'Edit form details' : 'New form'} onClose={onClose}>
-      <FormDialogBody form={form} onClose={onClose} />
+    <Dialog open={open} title={title} onClose={onClose}>
+      <FormDialogBody form={form} cloneOf={cloneOf} onClose={onClose} />
     </Dialog>
   )
 }
 
-function FormDialogBody({ form, onClose }: { form?: Form; onClose: () => void }) {
+function FormDialogBody({ form, cloneOf, onClose }: { form?: Form; cloneOf?: Form; onClose: () => void }) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
-  const [name, setName] = useState(form?.name ?? '')
-  const [code, setCode] = useState(form?.code ?? '')
+  const initialName = cloneOf ? `${cloneOf.name} (copy)` : (form?.name ?? '')
+  const [name, setName] = useState(initialName)
+  const [code, setCode] = useState(cloneOf ? toFormCode(initialName) : (form?.code ?? ''))
   const [codeEdited, setCodeEdited] = useState(false)
   const [description, setDescription] = useState(form?.description ?? '')
   const [category, setCategory] = useState(form?.category ?? '')
 
   const mutation = useMutation({
-    meta: { toast: form ? 'Details saved' : 'Form created' },
+    meta: { toast: cloneOf ? 'Form cloned' : form ? 'Details saved' : 'Form created' },
     mutationFn: () => {
+      if (cloneOf) return cloneForm(cloneOf.id, { name, code })
       const details = { name, description: description || undefined, category: category || undefined }
       return form ? updateForm(form.id, details) : createForm({ ...details, code })
     },
@@ -67,6 +72,12 @@ function FormDialogBody({ form, onClose }: { form?: Form; onClose: () => void })
 
   return (
     <form onSubmit={handleSubmit} noValidate className="mt-4 space-y-4">
+      {cloneOf && (
+        <p className="text-sm leading-relaxed text-slate-600">
+          A new draft is made from <strong>{cloneOf.name}</strong>: its description, category, fields, rules and
+          conditions are copied. Versions, submissions and history are not.
+        </p>
+      )}
       {hasOwnerlessError && <Alert>{messageOf(mutation.error)}</Alert>}
       <Input
         label="Name"
@@ -74,6 +85,7 @@ function FormDialogBody({ form, onClose }: { form?: Form; onClose: () => void })
         value={name}
         maxLength={255}
         autoFocus
+        onFocus={(event) => cloneOf && event.target.select()}
         onChange={(event) => {
           setName(event.target.value)
           if (!form && !codeEdited) setCode(toFormCode(event.target.value))
@@ -97,25 +109,29 @@ function FormDialogBody({ form, onClose }: { form?: Form; onClose: () => void })
             : 'Used in the public link. 3 to 50 lowercase letters, digits and hyphens. It can never be changed.'
         }
       />
-      <Textarea
-        label="Description"
-        value={description}
-        onChange={(event) => setDescription(event.target.value)}
-        error={fieldErrors.description}
-      />
-      <Input
-        label="Category"
-        value={category}
-        maxLength={100}
-        onChange={(event) => setCategory(event.target.value)}
-        error={fieldErrors.category}
-      />
+      {!cloneOf && (
+        <>
+          <Textarea
+            label="Description"
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            error={fieldErrors.description}
+          />
+          <Input
+            label="Category"
+            value={category}
+            maxLength={100}
+            onChange={(event) => setCategory(event.target.value)}
+            error={fieldErrors.category}
+          />
+        </>
+      )}
       <div className="flex justify-end gap-2 pt-2">
         <Button variant="secondary" onClick={onClose}>
           Cancel
         </Button>
         <Button type="submit" loading={mutation.isPending}>
-          {form ? 'Save changes' : 'Create form'}
+          {cloneOf ? 'Clone form' : form ? 'Save changes' : 'Create form'}
         </Button>
       </div>
     </form>

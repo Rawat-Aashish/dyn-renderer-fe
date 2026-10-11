@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Archive, Eye, FilePlus2, Link2, Pencil, Rocket, Trash2 } from 'lucide-react'
+import { ArrowLeft, Archive, Copy, Eye, FilePlus2, History, Inbox, Link2, Pencil, Rocket, ScrollText, SquarePen, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { Link, Outlet, useNavigate, useParams } from 'react-router-dom'
+import { Link, NavLink, Outlet, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ApiError, messageOf } from '../api/client'
 import { FormActionDialogs, type FormAction } from '../components/forms/FormActionDialogs'
@@ -13,12 +13,18 @@ import { formKey, useFormDetail } from '../hooks/useFormDetail'
 import { describeStatus, isLocked } from '../lib/form-status'
 import { publishVersion } from '../services/version.service'
 import { useBuilderStore } from '../stores/builder.store'
-import type { FormOutletContext } from './form-outlet'
+
+const TABS = [
+  { to: '', label: 'Builder', icon: SquarePen, end: true },
+  { to: 'versions', label: 'Versions', icon: History, end: false },
+  { to: 'submissions', label: 'Submissions', icon: Inbox, end: false },
+  { to: 'audit', label: 'Audit log', icon: ScrollText, end: false },
+]
 
 const previewLinkClass =
-  'inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors duration-150 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600'
+  'inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition-colors duration-150 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600'
 
-/** Header shared by every screen under /admin/forms/:id. The form's sections live in the sidebar. */
+/** Header and tabs shared by every screen under /admin/forms/:id. */
 export function FormLayout() {
   const { id } = useParams()
   const formId = Number(id)
@@ -60,11 +66,9 @@ export function FormLayout() {
   const locked = isLocked(form)
   const everPublished = form.publishedVersion !== null
   const isLive = everPublished && !form.archived
-  const publicLink = `${window.location.origin}/f/${form.code}`
-  const outletContext: FormOutletContext = { requestPublish: () => setPublishing(true) }
 
   async function copyLink() {
-    await navigator.clipboard.writeText(publicLink)
+    await navigator.clipboard.writeText(`${window.location.origin}/f/${form.code}`)
     toast.success('Link copied')
   }
 
@@ -100,55 +104,49 @@ export function FormLayout() {
               <Badge tone={info.tone}>{info.label}</Badge>
               {form.category && <Badge tone="blue">{form.category}</Badge>}
             </div>
-            {isLive && (
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                <span className="text-slate-600">Public link</span>
-                <a href={publicLink} target="_blank" rel="noreferrer" className="font-mono text-xs text-brand-700 hover:underline">
-                  {publicLink}
-                </a>
-                <button
-                  type="button"
-                  onClick={copyLink}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 px-2 py-0.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                >
-                  <Link2 aria-hidden="true" className="size-3.5" />
-                  Copy link
-                </button>
-              </div>
-            )}
           </div>
           <div className="flex flex-wrap gap-2">
             <Link to={`/admin/forms/${form.id}/preview`} className={previewLinkClass}>
-              <Eye aria-hidden="true" className="size-4" />
+              <Eye aria-hidden="true" className="size-3.5" />
               Preview
             </Link>
+            {isLive && (
+              <Button size="sm" variant="secondary" onClick={copyLink}>
+                <Link2 aria-hidden="true" className="size-3.5" />
+                Copy link
+              </Button>
+            )}
+            <Button size="sm" variant="secondary" onClick={() => setAction('clone')}>
+              <Copy aria-hidden="true" className="size-3.5" />
+              Clone
+            </Button>
             {!locked && (
-              <Button variant="secondary" onClick={() => setAction('edit')}>
-                <Pencil aria-hidden="true" className="size-4" />
+              <Button size="sm" variant="secondary" onClick={() => setAction('edit')}>
+                <Pencil aria-hidden="true" className="size-3.5" />
                 Edit details
               </Button>
             )}
             {!form.archived && !everPublished && (
-              <Button variant="secondary" onClick={() => setAction('delete')}>
-                <Trash2 aria-hidden="true" className="size-4" />
+              <Button size="sm" variant="secondary" onClick={() => setAction('delete')}>
+                <Trash2 aria-hidden="true" className="size-3.5" />
                 Delete
               </Button>
             )}
             {!form.archived && everPublished && (
-              <Button variant="secondary" onClick={() => setAction('archive')}>
-                <Archive aria-hidden="true" className="size-4" />
+              <Button size="sm" variant="secondary" onClick={() => setAction('archive')}>
+                <Archive aria-hidden="true" className="size-3.5" />
                 Archive
               </Button>
             )}
             {!form.archived && form.status === 'DRAFT' && (
-              <Button onClick={() => setPublishing(true)}>
-                <Rocket aria-hidden="true" className="size-4" />
+              <Button size="sm" onClick={() => setPublishing(true)}>
+                <Rocket aria-hidden="true" className="size-3.5" />
                 Publish
               </Button>
             )}
             {!form.archived && form.status === 'PUBLISHED' && (
-              <Button onClick={() => setAction('newVersion')}>
-                <FilePlus2 aria-hidden="true" className="size-4" />
+              <Button size="sm" onClick={() => setAction('newVersion')}>
+                <FilePlus2 aria-hidden="true" className="size-3.5" />
                 Create new version
               </Button>
             )}
@@ -160,10 +158,30 @@ export function FormLayout() {
             <Alert tone="info">This form is archived. It is no longer public and can no longer be changed.</Alert>
           </div>
         )}
+
+        <nav aria-label="Form sections" className="flex gap-1 border-t border-slate-200 px-3">
+          {TABS.map((tab) => (
+            <NavLink
+              key={tab.label}
+              to={tab.to}
+              end={tab.end}
+              className={({ isActive }) =>
+                `-mb-px inline-flex items-center gap-2 border-b-2 px-3 py-3 text-sm font-medium transition-colors duration-150 ${
+                  isActive
+                    ? 'border-brand-600 text-brand-700'
+                    : 'border-transparent text-slate-600 hover:text-slate-900'
+                }`
+              }
+            >
+              <tab.icon aria-hidden="true" className="size-4" />
+              {tab.label}
+            </NavLink>
+          ))}
+        </nav>
       </div>
 
       <div className="mt-6">
-        <Outlet context={outletContext} />
+        <Outlet />
       </div>
 
       <FormActionDialogs

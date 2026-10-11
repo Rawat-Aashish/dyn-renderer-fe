@@ -1,4 +1,5 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { Inbox } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { messageOf } from '../../api/client'
@@ -10,12 +11,11 @@ import { useFormDetail } from '../../hooks/useFormDetail'
 import { formatDateTime } from '../../lib/format'
 import { listSubmissions } from '../../services/submission.service'
 
-function Count({ label, value, note }: { label: string; value: number; note: string }) {
+function Figure({ value, label }: { value: number; label: string }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+    <div>
+      <p className="text-3xl font-semibold tracking-tight text-slate-900">{value.toLocaleString()}</p>
       <p className="text-sm font-medium text-slate-600">{label}</p>
-      <p className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">{value}</p>
-      <p className="mt-1 text-xs text-slate-500">{note}</p>
     </div>
   )
 }
@@ -41,33 +41,42 @@ export function SubmissionsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Count label="Started" value={data.startedCount} note="Everyone who opened the form, all versions" />
-        <Count label="Submitted" value={data.submittedCount} note="Responses accepted, all versions" />
-      </div>
-
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="w-48">
-          <Select
-            label="Version"
-            value={version === null ? '' : String(version)}
-            onChange={(event) => {
-              setVersion(event.target.value === '' ? null : Number(event.target.value))
-              setPage(0)
-            }}
-          >
-            <option value="">All versions</option>
-            {versions.map((number) => (
-              <option key={number} value={number}>
-                Version {number}
-              </option>
-            ))}
-          </Select>
+      <div className="flex items-start justify-between gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm sm:inline-flex sm:min-w-96">
+        <div>
+          <p className="text-sm font-medium text-slate-500">Responses · all versions</p>
+          <div className="mt-2 flex items-stretch gap-6">
+            <Figure value={data.startedCount} label="Started" />
+            <div aria-hidden="true" className="w-px bg-slate-200" />
+            <Figure value={data.submittedCount} label="Submitted" />
+          </div>
         </div>
-        {data.archived && <Badge tone="slate">Archived form</Badge>}
+        <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-full bg-brand-50 text-brand-600">
+          <Inbox className="size-5" />
+        </span>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-200 px-4 py-3">
+          <div className="w-48">
+            <Select
+              label="Version"
+              value={version === null ? '' : String(version)}
+              onChange={(event) => {
+                setVersion(event.target.value === '' ? null : Number(event.target.value))
+                setPage(0)
+              }}
+            >
+              <option value="">All versions</option>
+              {versions.map((number) => (
+                <option key={number} value={number}>
+                  Version {number}
+                </option>
+              ))}
+            </Select>
+          </div>
+          {data.archived && <Badge tone="slate">Archived form</Badge>}
+        </div>
+
         {data.items.length === 0 ? (
           <EmptyState
             title="No submissions"

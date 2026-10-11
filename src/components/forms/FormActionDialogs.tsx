@@ -6,7 +6,7 @@ import type { Form } from '../../types/form'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { FormDialog } from './FormDialog'
 
-export type FormAction = 'edit' | 'delete' | 'archive' | 'newVersion'
+export type FormAction = 'edit' | 'clone' | 'delete' | 'archive' | 'newVersion'
 
 interface FormActionDialogsProps {
   form: Form
@@ -47,6 +47,7 @@ export function FormActionDialogs({ form, action, onClose, onDeleted }: FormActi
   return (
     <>
       <FormDialog open={action === 'edit'} onClose={onClose} form={form} />
+      <FormDialog open={action === 'clone'} onClose={onClose} cloneOf={form} />
 
       <ConfirmDialog
         open={action === 'newVersion'}

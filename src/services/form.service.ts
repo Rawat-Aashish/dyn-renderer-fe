@@ -21,6 +21,11 @@ export function createForm(input: FormInput): Promise<Form> {
   return request<Form>('/api/forms', { method: 'POST', body: input })
 }
 
+/** A new draft with the source's description, category, fields, rules and conditions; nothing else is copied. */
+export function cloneForm(id: number, input: { name: string; code: string }): Promise<Form> {
+  return request<Form>(`/api/forms/${id}/clone`, { method: 'POST', body: input })
+}
+
 export function updateForm(id: number, input: FormInput): Promise<Form> {
   return request<Form>(`/api/forms/${id}`, { method: 'PUT', body: input })
 }

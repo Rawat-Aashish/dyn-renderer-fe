@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { Archive, Eye, FilePlus2, Link2, Pencil, Plus, Trash2, type LucideIcon } from 'lucide-react'
+import { Archive, Copy, Eye, FilePlus2, Link2, Pencil, Plus, Trash2, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -48,6 +48,7 @@ function RowActions({ form, onAction }: { form: Form; onAction: (action: FormAct
         <Eye aria-hidden="true" className="size-4" />
       </Link>
       {!isLocked(form) && <IconButton label="Edit details" icon={Pencil} onClick={() => onAction('edit')} />}
+      <IconButton label="Clone" icon={Copy} onClick={() => onAction('clone')} />
       {live && <IconButton label="Copy public link" icon={Link2} onClick={copyLink} />}
       {!form.archived && form.status === 'PUBLISHED' && (
         <IconButton label="Create new version" icon={FilePlus2} onClick={() => onAction('newVersion')} />
@@ -86,7 +87,7 @@ export function FormListPage() {
         </Button>
       </div>
 
-      <div className="mt-6 flex flex-wrap items-end gap-4">
+      <div className="mt-6 flex flex-wrap items-end gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="w-full sm:w-72">
           <Input
             label="Search"

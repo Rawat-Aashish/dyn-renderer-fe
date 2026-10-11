@@ -19,11 +19,9 @@ interface BuilderScreenProps {
   readOnly: boolean
   /** Shown above the columns, normally the reason the form is read-only. */
   notice?: ReactNode
-  /** Shortcuts on the overview card, which fills the right side while no field is selected. */
-  overview?: { previewTo?: string; onPublish?: () => void }
 }
 
-export function BuilderScreen({ formId, components, conditions, readOnly, notice, overview }: BuilderScreenProps) {
+export function BuilderScreen({ formId, components, conditions, readOnly, notice }: BuilderScreenProps) {
   const selectedId = useBuilderStore((state) => state.selectedId)
   const dirty = useBuilderStore((state) => state.settingsDirty)
   const publishState = useBuilderStore((state) => state.publishErrors)
@@ -44,6 +42,13 @@ export function BuilderScreen({ formId, components, conditions, readOnly, notice
 
   // Selection and unsaved-edit state belong to one form on one screen.
   useEffect(() => reset, [reset, formId])
+
+  // A form opens with its sections folded, so a long form reads as a list of parts. Sections added afterwards
+  // are not in this list and start open, ready to be filled.
+  const [initiallyFolded] = useState(() =>
+    components.filter((component) => component.componentType === 'SECTION').map((section) => section.id),
+  )
+  useEffect(() => setCollapsed(initiallyFolded), [initiallyFolded, setCollapsed])
 
   const flat = useMemo(() => flattenComponents(components), [components])
   const sections = useMemo(() => flat.filter((component) => component.componentType === 'SECTION'), [flat])
@@ -165,12 +170,7 @@ export function BuilderScreen({ formId, components, conditions, readOnly, notice
               readOnly={readOnly}
             />
           ) : (
-            <FormOverview
-              components={components}
-              conditions={conditions}
-              previewTo={overview?.previewTo}
-              onPublish={readOnly ? undefined : overview?.onPublish}
-            />
+            <FormOverview components={components} conditions={conditions} />
           )}
         </div>
       </div>

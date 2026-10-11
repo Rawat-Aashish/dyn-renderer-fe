@@ -1,16 +1,10 @@
-import { CircleCheck, Eye, Rocket, TriangleAlert } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { CircleCheck, TriangleAlert } from 'lucide-react'
 import { flattenComponents, isChoice, isLayout } from '../../lib/component-meta'
 import type { Condition, FormComponent } from '../../types/form'
-import { Button } from '../ui/Button'
 
 interface FormOverviewProps {
   components: FormComponent[]
   conditions: Condition[]
-  /** Where "Preview" goes; absent when there is nothing to preview. */
-  previewTo?: string
-  /** Opens the publish confirmation; absent when the form cannot be published from here. */
-  onPublish?: () => void
 }
 
 function Stat({ label, value }: { label: string; value: number }) {
@@ -23,7 +17,7 @@ function Stat({ label, value }: { label: string; value: number }) {
 }
 
 /** What the form holds, and what is already known to block publishing. Shown while no field is selected. */
-export function FormOverview({ components, conditions, previewTo, onPublish }: FormOverviewProps) {
+export function FormOverview({ components, conditions }: FormOverviewProps) {
   const flat = flattenComponents(components)
   const sections = flat.filter((component) => component.componentType === 'SECTION')
   const inputs = flat.filter((component) => !isLayout(component.componentType))
@@ -78,26 +72,6 @@ export function FormOverview({ components, conditions, previewTo, onPublish }: F
       <p className="mt-2 text-xs text-slate-500">Publishing runs the complete check and lists anything else.</p>
 
       <p className="mt-5 text-xs text-slate-500">Select a field on the canvas to edit it.</p>
-
-      {(previewTo || onPublish) && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {previewTo && (
-            <Link
-              to={previewTo}
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors duration-150 hover:bg-slate-50"
-            >
-              <Eye aria-hidden="true" className="size-4" />
-              Preview
-            </Link>
-          )}
-          {onPublish && (
-            <Button onClick={onPublish}>
-              <Rocket aria-hidden="true" className="size-4" />
-              Publish
-            </Button>
-          )}
-        </div>
-      )}
     </aside>
   )
 }
