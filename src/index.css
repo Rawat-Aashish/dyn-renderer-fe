@@ -38,6 +38,16 @@
   --color-accent-950: #0f2733;
 }
 
+/* The page scrollbar is hidden (scrolling still works), so a short page and a long one have the same width and nothing
+   jumps sideways when the admin moves between tabs. */
+html {
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
 /* The visitor's page: a pale wash with soft glows of #7bb4cc in two opposite corners. */
 .form-backdrop {
   background-color: #f4f8fb;
