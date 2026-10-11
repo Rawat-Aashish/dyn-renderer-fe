@@ -1,6 +1,9 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useBlocker } from 'react-router-dom'
+import { formKey } from '../../hooks/useFormDetail'
 import { findComponent, flattenComponents } from '../../lib/component-meta'
+import { deleteComponent } from '../../services/component.service'
 import { useBuilderStore } from '../../stores/builder.store'
 import type { Condition, FormComponent } from '../../types/form'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
@@ -34,6 +37,17 @@ export function BuilderScreen({ formId, components, conditions, readOnly, notice
   const reset = useBuilderStore((state) => state.reset)
   const [adding, setAdding] = useState<Adding | null>(null)
   const [pending, setPending] = useState<(() => void) | null>(null)
+  const [deleting, setDeleting] = useState<FormComponent | null>(null)
+  const queryClient = useQueryClient()
+
+  const remove = useMutation({
+    meta: { toast: 'Deleted' },
+    mutationFn: (component: FormComponent) => deleteComponent(formId, component.id),
+    onSuccess: async (_data, component) => {
+      await queryClient.invalidateQueries({ queryKey: formKey(formId) })
+      if (useBuilderStore.getState().selectedId === component.id) select(null)
+    },
+  })
 
   const publishErrors = useMemo(
     () => (publishState?.formId === formId ? publishState.errors : {}),
@@ -139,6 +153,7 @@ export function BuilderScreen({ formId, components, conditions, readOnly, notice
               logicCodes={logicCodes}
               collapsed={collapsed}
               onToggleSection={toggleSection}
+              onDelete={readOnly ? undefined : (component) => guarded(() => setDeleting(component))}
               onAdd={
                 readOnly
                   ? undefined
@@ -182,6 +197,22 @@ export function BuilderScreen({ formId, components, conditions, readOnly, notice
         onClose={() => setAdding(null)}
         onAdded={(created) => goTo(created.id)}
       />
+
+      <ConfirmDialog
+        open={deleting !== null}
+        title={deleting?.componentType === 'SECTION' ? 'Delete this section?' : 'Delete this field?'}
+        confirmLabel={deleting?.componentType === 'SECTION' ? 'Delete section' : 'Delete field'}
+        danger
+        onConfirm={() => remove.mutateAsync(deleting!)}
+        onClose={() => setDeleting(null)}
+      >
+        <p>
+          <strong>{deleting?.fieldLabel}</strong>
+          {deleting?.componentType === 'SECTION'
+            ? ' will be removed from this draft. A section must be empty before it can be deleted.'
+            : ' and its validation rules will be removed from this draft.'}
+        </p>
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={pending !== null}

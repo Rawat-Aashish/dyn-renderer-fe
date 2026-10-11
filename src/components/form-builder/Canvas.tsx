@@ -1,6 +1,6 @@
 import { DragDropContext, Draggable, Droppable, type DraggableProvidedDragHandleProps, type DropResult } from '@hello-pangea/dnd'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ChevronDown, ChevronRight, GripVertical } from 'lucide-react'
+import { ChevronDown, ChevronRight, GripVertical, Trash2 } from 'lucide-react'
 import { messageOf } from '../../api/client'
 import { formKey } from '../../hooks/useFormDetail'
 import { TYPE_ICONS } from '../../lib/component-icons'
@@ -26,6 +26,8 @@ interface CanvasProps {
   /** Sections that are folded shut. */
   collapsed: ReadonlySet<number>
   onToggleSection: (id: number) => void
+  /** Asks to delete a component. Absent when read-only. */
+  onDelete?: (component: FormComponent) => void
 }
 
 interface ReorderVars {
@@ -64,6 +66,7 @@ export function Canvas({
   onAdd,
   collapsed,
   onToggleSection,
+  onDelete,
 }: CanvasProps) {
   const queryClient = useQueryClient()
 
@@ -179,6 +182,17 @@ export function Canvas({
                             <Badge>{TYPE_LABELS[component.componentType]}</Badge>
                           </span>
                         </button>
+                        {onDelete && (
+                          <button
+                            type="button"
+                            aria-label={`Delete ${component.fieldLabel}`}
+                            title="Delete"
+                            onClick={() => onDelete(component)}
+                            className="grid w-10 shrink-0 place-items-center rounded-r-lg text-slate-400 transition-colors duration-150 hover:bg-red-50 hover:text-red-600 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-red-600"
+                          >
+                            <Trash2 aria-hidden="true" className="size-4" />
+                          </button>
+                        )}
                       </div>
 
                       {isSection && open && (

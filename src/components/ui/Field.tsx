@@ -6,6 +6,8 @@ interface FieldProps {
   error?: string
   help?: string | null
   required?: boolean
+  /** Why the control cannot be used, shown under it. Its id is `${htmlFor}-note`. */
+  note?: string
   children: ReactNode
 }
 
@@ -13,7 +15,7 @@ interface FieldProps {
  * Label above, control, then the error (which replaces the help text while there is one).
  * The label has the id `${htmlFor}-label` so grouped controls can use aria-labelledby.
  */
-export function Field({ label, htmlFor, error, help, required, children }: FieldProps) {
+export function Field({ label, htmlFor, error, help, required, note, children }: FieldProps) {
   return (
     <div>
       <label id={`${htmlFor}-label`} htmlFor={htmlFor} className="mb-1 block text-sm font-medium text-slate-700">
@@ -27,6 +29,11 @@ export function Field({ label, htmlFor, error, help, required, children }: Field
         </p>
       ) : (
         help && <p className="mt-1 text-xs text-slate-500">{help}</p>
+      )}
+      {note && (
+        <p id={`${htmlFor}-note`} className="mt-1 text-xs text-slate-500 italic">
+          {note}
+        </p>
       )}
     </div>
   )

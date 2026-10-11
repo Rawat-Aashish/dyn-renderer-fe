@@ -116,7 +116,7 @@ export function FieldControl({
           disabled={disabled}
           onChange={(event) => onChange(event.target.value)}
           onBlur={onBlur}
-          className={`${className} cursor-pointer`}
+          className={`${className} enabled:cursor-pointer`}
           {...ariaProps}
         />
       )

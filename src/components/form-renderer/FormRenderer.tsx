@@ -34,6 +34,13 @@ export function FormRenderer({ components, answers, states, errors, onChange, on
 
         const id = `field-${code}`
         const error = errors[code]
+        const locked = component.isReadOnly || !state.enabled
+        const note = locked
+          ? component.isReadOnly
+            ? "This value is fixed and can't be changed."
+            : 'This field is not available for editing.'
+          : undefined
+        const describedBy = [error ? `${id}-error` : null, note ? `${id}-note` : null].filter(Boolean).join(' ')
         return (
           <Field
             key={component.id}
@@ -42,6 +49,7 @@ export function FormRenderer({ components, answers, states, errors, onChange, on
             required={state.required}
             error={error}
             help={component.helpText}
+            note={note}
           >
             <FieldControl
               type={component.componentType}
@@ -52,9 +60,9 @@ export function FormRenderer({ components, answers, states, errors, onChange, on
               options={component.properties.options}
               placeholder={component.placeholder}
               decimalPlaces={component.properties.decimalPlaces}
-              disabled={!state.enabled || component.isReadOnly}
+              disabled={locked}
               invalid={Boolean(error)}
-              describedBy={error ? `${id}-error` : undefined}
+              describedBy={describedBy || undefined}
               clearable={!state.required}
             />
           </Field>

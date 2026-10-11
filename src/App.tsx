@@ -38,7 +38,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
-      <Toaster position="bottom-right" richColors closeButton />
+      <Toaster position="top-right" offset={{ top: 72, right: 16 }} richColors closeButton />
     </QueryClientProvider>
   )
 }

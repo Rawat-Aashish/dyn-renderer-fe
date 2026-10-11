@@ -87,6 +87,11 @@ export function SettingsForm({ formId, component, sections, readOnly, controlled
   const hasFieldErrors = Object.keys(errors).length > 0
   const layout = isLayout(type)
   const parents = sections.filter((section) => section.id !== component.id)
+  // A required field must be fillable, so it cannot also be read-only or disabled. A box that is already ticked stays
+  // clickable, so a field saved with both before this rule can still be fixed.
+  const requiredBlocked = (draft.isReadOnly || draft.isDisabled) && !draft.isRequired
+  const readOnlyBlocked = draft.isRequired && !draft.isReadOnly
+  const disabledBlocked = draft.isRequired && !draft.isDisabled
 
   return (
     <form
@@ -212,21 +217,38 @@ export function SettingsForm({ formId, component, sections, readOnly, controlled
             <>
               <Checkbox
                 label="Required"
-                hint={controlled.isRequired ? BY_CONDITION : undefined}
-                disabled={controlled.isRequired}
+                hint={
+                  controlled.isRequired
+                    ? BY_CONDITION
+                    : requiredBlocked
+                      ? 'Not available while the field is read-only or disabled.'
+                      : undefined
+                }
+                disabled={controlled.isRequired || requiredBlocked}
                 checked={draft.isRequired}
                 onChange={(v) => set('isRequired', v)}
               />
               <Checkbox
                 label="Read-only"
-                hint="Shows the default value; whatever is sent is ignored."
+                hint={
+                  readOnlyBlocked
+                    ? 'Not available while the field is required.'
+                    : 'Shows the default value; whatever is sent is ignored.'
+                }
+                disabled={readOnlyBlocked}
                 checked={draft.isReadOnly}
                 onChange={(v) => set('isReadOnly', v)}
               />
               <Checkbox
                 label="Disabled"
-                hint={controlled.isDisabled ? BY_CONDITION : 'Cannot be edited and is not validated or stored.'}
-                disabled={controlled.isDisabled}
+                hint={
+                  controlled.isDisabled
+                    ? BY_CONDITION
+                    : disabledBlocked
+                      ? 'Not available while the field is required.'
+                      : 'Cannot be edited and is not validated or stored.'
+                }
+                disabled={controlled.isDisabled || disabledBlocked}
                 checked={draft.isDisabled}
                 onChange={(v) => set('isDisabled', v)}
               />

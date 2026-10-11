@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { ChevronRight } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { ApiError, messageOf } from '../../api/client'
 import { Badge } from '../../components/ui/Badge'
@@ -24,21 +25,26 @@ function AnswerRow({ label, children }: { label: string; code: string; children:
 }
 
 /**
- * Follow-up questions hang off their parent like a comment thread: a dashed line drops from the parent and each
- * follow-up branches off it with a short dashed elbow. The line of the last one stops at its elbow.
+ * Follow-up questions hang off their parent like a comment thread: a line drops from the parent and each follow-up
+ * branches off it with a rounded elbow. The line of the last one stops at its elbow. Folded until asked for, so a
+ * long response reads as its main questions first.
  */
 function Thread({ children }: { children: React.ReactNode[] }) {
   return (
-    <div className="ml-7">
+    <details className="group ml-7">
+      <summary className="flex w-fit cursor-pointer list-none items-center gap-1 rounded px-1 pb-2 text-xs font-medium text-slate-500 hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-brand-600 [&::-webkit-details-marker]:hidden">
+        <ChevronRight aria-hidden="true" className="size-3.5 transition-transform duration-150 group-open:rotate-90" />
+        {children.length} follow-up {children.length === 1 ? 'question' : 'questions'}
+      </summary>
       {children.map((child, index) => (
         <div
           key={index}
-          className="relative border-l-2 border-dashed border-slate-300 before:absolute before:top-[1.4rem] before:left-0 before:w-4 before:border-t-2 before:border-dashed before:border-slate-300 last:border-l-0 last:after:absolute last:after:top-0 last:after:left-0 last:after:h-[1.4rem] last:after:border-l-2 last:after:border-dashed last:after:border-slate-300"
+          className="relative border-l-2 border-slate-300 before:absolute before:top-0 before:-left-0.5 before:h-[1.4rem] before:w-4 before:rounded-bl-xl before:border-b-2 before:border-l-2 before:border-slate-300 last:border-l-0 last:before:left-0"
         >
           {child}
         </div>
       ))}
-    </div>
+    </details>
   )
 }
 
@@ -118,7 +124,7 @@ export function SubmissionDetailPage() {
       if (shown.length === 0) return null
       return (
         <div key={component.id}>
-          <h3 className="bg-sky-200 px-5 py-2 text-xs font-semibold tracking-wide text-slate-600 uppercase">
+          <h3 className="border-y border-dashed border-gray-200 px-5 py-2 text-xs font-semibold tracking-wide text-slate-600 uppercase">
             {component.fieldLabel}
           </h3>
           <div className="divide-y divide-slate-100">{renderLevel(component.children)}</div>

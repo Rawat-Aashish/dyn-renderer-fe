@@ -103,9 +103,27 @@ export function needsValue(operator: Operator): boolean {
 
 /** A target can have at most one condition per pair; the pair decides which property it controls. */
 export const CONDITION_PAIRS = [
-  { id: 'visibility', title: 'Visibility', actions: ['SHOW', 'HIDE'] as Action[], flag: 'isVisible' as const },
-  { id: 'enabled', title: 'Enabled', actions: ['ENABLE', 'DISABLE'] as Action[], flag: 'isDisabled' as const },
-  { id: 'required', title: 'Required', actions: ['MAKE_REQUIRED', 'MAKE_OPTIONAL'] as Action[], flag: 'isRequired' as const },
+  {
+    id: 'visibility',
+    title: 'Visibility',
+    hint: "Show or hide this field depending on other fields' answers.",
+    actions: ['SHOW', 'HIDE'] as Action[],
+    flag: 'isVisible' as const,
+  },
+  {
+    id: 'enabled',
+    title: 'Enabled',
+    hint: "Let people fill in this field, or lock it, depending on other fields' answers.",
+    actions: ['ENABLE', 'DISABLE'] as Action[],
+    flag: 'isDisabled' as const,
+  },
+  {
+    id: 'required',
+    title: 'Required',
+    hint: "Make this field required or optional depending on other fields' answers.",
+    actions: ['MAKE_REQUIRED', 'MAKE_OPTIONAL'] as Action[],
+    flag: 'isRequired' as const,
+  },
 ]
 export type ConditionPair = (typeof CONDITION_PAIRS)[number]
 

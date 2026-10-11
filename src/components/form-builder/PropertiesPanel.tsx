@@ -1,14 +1,7 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { formKey } from '../../hooks/useFormDetail'
 import { TYPE_LABELS } from '../../lib/component-meta'
-import { deleteComponent } from '../../services/component.service'
-import { useBuilderStore } from '../../stores/builder.store'
 import type { Condition, FormComponent } from '../../types/form'
 import { Badge } from '../ui/Badge'
-import { Button } from '../ui/Button'
-import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { LogicTab } from './LogicTab'
 import { SettingsForm } from './SettingsForm'
 import { toDraft } from './settings-draft'
@@ -27,19 +20,7 @@ interface PropertiesPanelProps {
 type Tab = 'settings' | 'validation' | 'logic'
 
 export function PropertiesPanel({ formId, component, components, sections, conditions, readOnly }: PropertiesPanelProps) {
-  const queryClient = useQueryClient()
-  const select = useBuilderStore((state) => state.select)
   const [tab, setTab] = useState<Tab>('settings')
-  const [deleting, setDeleting] = useState(false)
-
-  const remove = useMutation({
-    meta: { toast: 'Field deleted' },
-    mutationFn: () => deleteComponent(formId, component.id),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: formKey(formId) })
-      select(null)
-    },
-  })
 
   // Rules, children and display order are edited elsewhere; they must not reset unsaved Settings edits.
   const settingsKey = useMemo(() => `${component.id}:${JSON.stringify(toDraft(component))}`, [component])
@@ -67,17 +48,9 @@ export function PropertiesPanel({ formId, component, components, sections, condi
 
   return (
     <aside aria-label="Properties" className="rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex items-start justify-between gap-3 p-4">
-        <div className="min-w-0">
-          <Badge tone="blue">{TYPE_LABELS[component.componentType]}</Badge>
-          <h2 className="mt-1.5 truncate text-base font-semibold text-slate-900">{component.fieldLabel}</h2>
-        </div>
-        {!readOnly && (
-          <Button variant="secondary" onClick={() => setDeleting(true)}>
-            <Trash2 aria-hidden="true" className="size-4" />
-            Delete
-          </Button>
-        )}
+      <div className="min-w-0 p-4">
+        <Badge tone="blue">{TYPE_LABELS[component.componentType]}</Badge>
+        <h2 className="mt-1.5 truncate text-base font-semibold text-slate-900">{component.fieldLabel}</h2>
       </div>
 
       <div role="tablist" aria-label="Field properties" className="flex gap-1 border-y border-slate-200 px-3">
@@ -119,19 +92,6 @@ export function PropertiesPanel({ formId, component, components, sections, condi
           <LogicTab formId={formId} component={component} components={components} conditions={conditions} readOnly={readOnly} />
         </div>
       </div>
-
-      <ConfirmDialog
-        open={deleting}
-        title="Delete this field?"
-        confirmLabel="Delete field"
-        danger
-        onConfirm={() => remove.mutateAsync()}
-        onClose={() => setDeleting(false)}
-      >
-        <p>
-          <strong>{component.fieldLabel}</strong> and its validation rules will be removed from this draft.
-        </p>
-      </ConfirmDialog>
     </aside>
   )
 }
