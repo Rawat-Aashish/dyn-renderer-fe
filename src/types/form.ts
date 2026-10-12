@@ -12,10 +12,14 @@ export const COMPONENT_TYPES = [
   'TOGGLE',
   'DATE',
   'DATETIME',
+  'FILE_UPLOAD',
   'SECTION',
   'HEADING',
 ] as const
 export type ComponentType = (typeof COMPONENT_TYPES)[number]
+
+export const FILE_FORMATS = ['jpg', 'png', 'webp', 'pdf'] as const
+export type FileFormat = (typeof FILE_FORMATS)[number]
 
 export const RULE_TYPES = ['MIN_LENGTH', 'MAX_LENGTH', 'REGEX', 'MIN', 'MAX', 'DATE_MIN', 'DATE_MAX'] as const
 export type RuleType = (typeof RULE_TYPES)[number]
@@ -48,6 +52,10 @@ export interface ComponentProperties {
   options?: Option[]
   decimalPlaces?: number
   collapsible?: boolean
+  /** FILE_UPLOAD: the formats it accepts; the server always returns the full list. */
+  allowedTypes?: FileFormat[]
+  /** FILE_UPLOAD: largest file in megabytes, 1 to 10. */
+  maxSizeMb?: number
 }
 
 export interface ValidationRule {
@@ -103,6 +111,7 @@ export interface Form {
   currentVersion: number
   publishedVersion: number | null
   archived: boolean
+  ratingEnabled: boolean
   createdAt: string
   updatedAt: string
 }
@@ -119,6 +128,8 @@ export interface Configuration {
   description: string | null
   category: string | null
   version: number
+  /** Absent in configurations published before ratings existed, which means false. */
+  ratingEnabled?: boolean
   components: FormComponent[]
   conditions: Condition[]
 }
@@ -143,6 +154,7 @@ export interface FormInput {
   code?: string
   description?: string
   category?: string
+  ratingEnabled?: boolean
 }
 
 export interface FormListParams {

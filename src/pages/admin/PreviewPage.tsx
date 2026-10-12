@@ -22,6 +22,7 @@ export function PreviewPage() {
             description: form.description,
             category: form.category,
             version: form.currentVersion,
+            ratingEnabled: form.ratingEnabled,
             components: form.components,
             conditions: form.conditions,
           }
@@ -46,7 +47,7 @@ export function PreviewPage() {
   return (
     <FormPreview
       // A fresh preview each time the working copy changes, so stale answers never sit on a new structure.
-      key={JSON.stringify([config.components, config.conditions])}
+      key={JSON.stringify([config.components, config.conditions, config.ratingEnabled])}
       config={config}
       backTo={`/admin/forms/${formId}`}
       source="working copy"

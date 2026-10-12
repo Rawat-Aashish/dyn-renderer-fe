@@ -1,4 +1,5 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { Star } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { messageOf } from '../../api/client'
@@ -35,6 +36,7 @@ export function SubmissionsPage() {
   if (query.isError) return <ErrorState message={messageOf(query.error)} onRetry={() => query.refetch()} />
 
   const data = query.data
+  const hasRatings = (data.ratingCount ?? 0) > 0
   const versions = Array.from({ length: form.currentVersion }, (_, index) => index + 1).reverse()
 
   return (
@@ -63,6 +65,16 @@ export function SubmissionsPage() {
             <Figure value={data.startedCount} label="started" />
             <div aria-hidden="true" className="h-6 w-px bg-slate-200" />
             <Figure value={data.submittedCount} label="submitted" />
+            {hasRatings && (
+              <>
+                <div aria-hidden="true" className="h-6 w-px bg-slate-200" />
+                <p className="flex items-center gap-1.5 text-sm text-slate-600">
+                  <Star aria-hidden="true" className="size-4 fill-amber-400 text-amber-400" />
+                  <span className="text-lg font-semibold text-slate-900">{data.averageRating}</span>
+                  average from {data.ratingCount} {data.ratingCount === 1 ? 'rating' : 'ratings'}
+                </p>
+              </>
+            )}
           </div>
         </div>
 
@@ -85,6 +97,7 @@ export function SubmissionsPage() {
                     <th scope="col" className="px-4 py-3">Version</th>
                     <th scope="col" className="px-4 py-3">Started</th>
                     <th scope="col" className="px-4 py-3">Submitted</th>
+                    {hasRatings && <th scope="col" className="px-4 py-3">Rating</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -101,6 +114,18 @@ export function SubmissionsPage() {
                       <td className="px-4 py-3 text-slate-600">v{submission.version}</td>
                       <td className="px-4 py-3 text-slate-600">{formatDateTime(submission.startedAt)}</td>
                       <td className="px-4 py-3 text-slate-600">{formatDateTime(submission.submittedAt)}</td>
+                      {hasRatings && (
+                        <td className="px-4 py-3 text-slate-600">
+                          {submission.rating != null ? (
+                            <span className="inline-flex items-center gap-1">
+                              <Star aria-hidden="true" className="size-3.5 fill-amber-400 text-amber-400" />
+                              {submission.rating}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">Not rated</span>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

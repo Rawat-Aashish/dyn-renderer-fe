@@ -1,4 +1,5 @@
 import type { FormComponent } from '../types/form'
+import { isUploadedFile } from './file-formats'
 
 function formatDate(value: string, withTime: boolean): string {
   const date = new Date(value)
@@ -24,6 +25,8 @@ export function formatAnswer(component: FormComponent, value: unknown): string {
     case 'CHECKBOX':
     case 'MULTISELECT':
       return Array.isArray(value) ? value.map(labelOf).join(', ') : labelOf(value)
+    case 'FILE_UPLOAD':
+      return isUploadedFile(value) ? value.name : String(value)
     case 'DATE':
       return typeof value === 'string' ? formatDate(value, false) : String(value)
     case 'DATETIME':

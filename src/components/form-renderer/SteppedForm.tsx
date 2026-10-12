@@ -3,6 +3,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import type { FormFiller } from '../../hooks/useFormFiller'
 import type { StepFlow } from '../../hooks/useStepFlow'
 import type { Configuration } from '../../types/form'
+import type { UploadedFile } from '../../types/submission'
 import { Button } from '../ui/Button'
 import { FormRenderer } from './FormRenderer'
 
@@ -15,13 +16,15 @@ interface SteppedFormProps {
   submitting?: boolean
   /** Shown above the button, e.g. a general error or a preview result. */
   notice?: ReactNode
+  /** Sends a file for a FILE_UPLOAD field. */
+  uploadFile?: (fieldCode: string, file: File) => Promise<UploadedFile>
 }
 
 const navButton =
   'grid size-8 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-600 transition-colors duration-150 hover:bg-slate-200 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600'
 
 /** One step of the form at a time, with a small top row, progress, back/forward arrows and the Next / Submit button. */
-export function SteppedForm({ config, filler, flow, onSubmit, submitting = false, notice }: SteppedFormProps) {
+export function SteppedForm({ config, filler, flow, onSubmit, submitting = false, notice, uploadFile }: SteppedFormProps) {
   const { steps, step, index, isFirst, isLast, canForward, direction } = flow
   const multiStep = steps.length > 1
   const stepKey = step?.key ?? null
@@ -104,6 +107,7 @@ export function SteppedForm({ config, filler, flow, onSubmit, submitting = false
                 errors={filler.errors}
                 onChange={filler.setAnswer}
                 onBlur={filler.touch}
+                uploadFile={uploadFile}
               />
             </>
           )}

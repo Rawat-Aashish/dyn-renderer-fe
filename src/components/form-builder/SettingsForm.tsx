@@ -2,10 +2,11 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useId, useMemo, useState } from 'react'
 import { fieldErrorsOf, messageOf } from '../../api/client'
 import { formKey } from '../../hooks/useFormDetail'
+import { FORMAT_INFO } from '../../lib/file-formats'
 import { isChoice, isLayout, supportsPlaceholder } from '../../lib/component-meta'
 import { updateComponent } from '../../services/component.service'
 import { useBuilderStore } from '../../stores/builder.store'
-import type { FormComponent } from '../../types/form'
+import { FILE_FORMATS, type FormComponent } from '../../types/form'
 import { FieldControl } from '../form-renderer/FieldControl'
 import { Button } from '../ui/Button'
 import { Field } from '../ui/Field'
@@ -170,7 +171,50 @@ export function SettingsForm({ formId, component, sections, readOnly, controlled
           />
         )}
 
+        {type === 'FILE_UPLOAD' && (
+          <>
+            <fieldset className="min-w-0">
+              <legend className="mb-1.5 text-sm font-medium text-slate-700">Accepted formats</legend>
+              <div className="flex flex-wrap gap-x-5 gap-y-2">
+                {FILE_FORMATS.map((format) => {
+                  const checked = draft.allowedTypes.includes(format)
+                  return (
+                    <Checkbox
+                      key={format}
+                      label={FORMAT_INFO[format].label}
+                      checked={checked}
+                      // At least one format stays ticked: an empty list would mean "all" to the server.
+                      disabled={checked && draft.allowedTypes.length === 1}
+                      onChange={(value) =>
+                        set(
+                          'allowedTypes',
+                          FILE_FORMATS.filter((item) => (item === format ? value : draft.allowedTypes.includes(item))),
+                        )
+                      }
+                    />
+                  )
+                })}
+              </div>
+              {errors.allowedTypes && <p className="mt-1 text-xs text-red-600">{errors.allowedTypes}</p>}
+            </fieldset>
+            <Select
+              label="Maximum size"
+              value={String(draft.maxSizeMb)}
+              onChange={(event) => set('maxSizeMb', Number(event.target.value))}
+              error={errors.maxSizeMb}
+              help="The server never accepts more than 10 MB."
+            >
+              {Array.from({ length: 10 }, (_, index) => index + 1).map((mb) => (
+                <option key={mb} value={mb}>
+                  {mb} MB
+                </option>
+              ))}
+            </Select>
+          </>
+        )}
+
         {!layout &&
+          type !== 'FILE_UPLOAD' &&
           (type === 'TOGGLE' ? (
             <Select
               label="Default value"

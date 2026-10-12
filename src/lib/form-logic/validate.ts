@@ -1,4 +1,5 @@
 import type { Configuration, FormComponent, ValidationRule } from '../../types/form.ts'
+import { isUploadedFile } from '../file-formats.ts'
 import { isEmpty, walk, type Answers } from './answers.ts'
 import type { FieldState } from './evaluate.ts'
 
@@ -53,6 +54,8 @@ function formatError(component: FormComponent, value: unknown): string | null {
       return Array.isArray(value) && value.every((item) => typeof item === 'string') ? null : 'Must be a list of option values'
     case 'TOGGLE':
       return typeof value === 'boolean' ? null : 'Must be true or false'
+    case 'FILE_UPLOAD':
+      return isUploadedFile(value) ? null : 'Must be the id of an uploaded file'
     case 'DATE':
       return typeof value === 'string' && DATE.test(value) && !Number.isNaN(Date.parse(value))
         ? null
@@ -150,6 +153,8 @@ function optionError(component: FormComponent, value: unknown): string | null {
 function toJson(component: FormComponent, value: unknown): unknown {
   const type = component.componentType
   if (type === 'NUMBER' || type === 'DECIMAL') return Number((value as string).trim())
+  // The submit call names an uploaded file by its id, not by the object the upload returned.
+  if (type === 'FILE_UPLOAD') return isUploadedFile(value) ? value.fileId : value
   return value
 }
 
@@ -176,7 +181,10 @@ export function validateAnswers(
 
     if (!state.enabled) {
       // Not validated and not stored, but still sent: another field's condition may read it.
-      if (!isEmpty(value)) payload[code] = typeof value === 'string' && (type === 'NUMBER' || type === 'DECIMAL') ? Number(value) : value
+      if (!isEmpty(value)) {
+        payload[code] =
+          typeof value === 'string' && (type === 'NUMBER' || type === 'DECIMAL') ? Number(value) : type === 'FILE_UPLOAD' ? toJson(component, value) : value
+      }
       continue
     }
 

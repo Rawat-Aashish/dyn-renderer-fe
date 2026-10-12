@@ -1,8 +1,11 @@
-import type { ComponentType, Option } from '../../types/form'
+import { MAX_FILE_MB } from '../../lib/file-formats'
+import { FILE_FORMATS, type ComponentType, type FileFormat, type Option } from '../../types/form'
+import type { UploadedFile } from '../../types/submission'
 import { ChoiceTile } from '../ui/ChoiceTile'
 import { controlClass } from '../ui/control-class'
 import { ListboxSelect } from '../ui/ListboxSelect'
 import { MultiSelect } from '../ui/MultiSelect'
+import { FileUploadControl } from './FileUploadControl'
 
 export interface FieldControlProps {
   type: ComponentType
@@ -15,6 +18,10 @@ export interface FieldControlProps {
   placeholder?: string | null
   decimalPlaces?: number
   disabled?: boolean
+  /** FILE_UPLOAD only: the formats and size the field accepts, and how a chosen file is sent. */
+  allowedTypes?: FileFormat[]
+  maxSizeMb?: number
+  onUpload?: (file: File) => Promise<UploadedFile>
   invalid?: boolean
   describedBy?: string
   /** Radio buttons cannot be unselected by themselves; this adds a Clear link. */
@@ -35,6 +42,9 @@ export function FieldControl({
   placeholder,
   decimalPlaces = 2,
   disabled,
+  allowedTypes = [...FILE_FORMATS],
+  maxSizeMb = MAX_FILE_MB,
+  onUpload,
   invalid,
   describedBy,
   clearable,
@@ -205,6 +215,22 @@ export function FieldControl({
         </div>
       )
     }
+
+    case 'FILE_UPLOAD':
+      return (
+        <FileUploadControl
+          id={id}
+          value={value}
+          allowedTypes={allowedTypes}
+          maxSizeMb={maxSizeMb}
+          disabled={disabled}
+          invalid={invalid}
+          describedBy={describedBy}
+          onUpload={onUpload}
+          onChange={onChange}
+          onBlur={onBlur}
+        />
+      )
 
     case 'TOGGLE': {
       const on = value === true

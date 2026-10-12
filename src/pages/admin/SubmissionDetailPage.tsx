@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Download, Star } from 'lucide-react'
+import { useState } from 'react'
+import { toast } from 'sonner'
 import { Link, useParams } from 'react-router-dom'
 import { ApiError, messageOf } from '../../api/client'
 import { Badge } from '../../components/ui/Badge'
@@ -7,10 +9,41 @@ import { ErrorState, Spinner } from '../../components/ui/StateViews'
 import { isEmpty, walk } from '../../lib/form-logic/answers.ts'
 import { evaluateStates } from '../../lib/form-logic/evaluate.ts'
 import { formatDateTime } from '../../lib/format'
+import { formatBytes, isUploadedFile } from '../../lib/file-formats'
 import { formatAnswer } from '../../lib/format-answer'
-import { getSubmission } from '../../services/submission.service'
+import { downloadSubmissionFile, getSubmission } from '../../services/submission.service'
 import { getVersion } from '../../services/version.service'
 import type { Configuration, FormComponent } from '../../types/form'
+import type { UploadedFile } from '../../types/submission'
+
+/** A stored file: only the admin token can fetch it, so it is a button that downloads, not a link. */
+function FileAnswer({ submissionId, file }: { submissionId: number; file: UploadedFile }) {
+  const [busy, setBusy] = useState(false)
+
+  async function download() {
+    setBusy(true)
+    try {
+      await downloadSubmissionFile(submissionId, file)
+    } catch (error) {
+      toast.error(messageOf(error))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => void download()}
+      disabled={busy}
+      className="inline-flex max-w-full items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-brand-700 transition-colors duration-150 hover:bg-brand-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-wait disabled:opacity-60"
+    >
+      <Download aria-hidden="true" className="size-4 shrink-0" />
+      <span className="truncate">{file.name}</span>
+      <span className="shrink-0 font-normal text-slate-500">{formatBytes(file.sizeBytes)}</span>
+    </button>
+  )
+}
 
 function AnswerRow({ label, children }: { label: string; code: string; children: React.ReactNode }) {
   return (
@@ -85,6 +118,7 @@ export function SubmissionDetailPage() {
 
   const submission = submissionQuery.data
   const configuration: Configuration | null = configQuery.data.configuration
+  const showRating = submission.rating != null || configuration?.ratingEnabled === true
   const nodes = configuration ? walk(configuration.components) : []
   const known = new Set(nodes.map((node) => node.component.fieldCode))
   const unknownKeys = Object.keys(submission.data).filter((key) => !known.has(key))
@@ -139,7 +173,13 @@ export function SubmissionDetailPage() {
     return (
       <div key={component.id}>
         <AnswerRow label={component.fieldLabel} code={component.fieldCode}>
-          {isEmpty(value) ? <span className="text-slate-400">Not answered</span> : formatAnswer(component, value)}
+          {isEmpty(value) ? (
+            <span className="text-slate-400">Not answered</span>
+          ) : isUploadedFile(value) ? (
+            <FileAnswer submissionId={submissionId} file={value} />
+          ) : (
+            formatAnswer(component, value)
+          )}
         </AnswerRow>
         {replies.length > 0 && <Thread>{replies}</Thread>}
       </div>
@@ -154,7 +194,7 @@ export function SubmissionDetailPage() {
         <Badge tone="blue">Version {submission.version}</Badge>
         {submission.archived && <Badge tone="slate">Archived form</Badge>}
       </div>
-      <dl className="grid gap-4 sm:grid-cols-2">
+      <dl className={`grid gap-4 ${showRating ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
         <div className="rounded-xl border border-slate-200 bg-white px-5 py-3 shadow-sm">
           <dt className="text-xs font-medium text-slate-500">Started</dt>
           <dd className="mt-0.5 text-sm text-slate-900">{formatDateTime(submission.startedAt)}</dd>
@@ -163,6 +203,21 @@ export function SubmissionDetailPage() {
           <dt className="text-xs font-medium text-slate-500">Submitted</dt>
           <dd className="mt-0.5 text-sm text-slate-900">{formatDateTime(submission.submittedAt)}</dd>
         </div>
+        {showRating && (
+          <div className="rounded-xl border border-slate-200 bg-white px-5 py-3 shadow-sm">
+            <dt className="text-xs font-medium text-slate-500">Rating</dt>
+            <dd className="mt-0.5 flex items-center gap-1.5 text-sm text-slate-900">
+              {submission.rating != null ? (
+                <>
+                  <Star aria-hidden="true" className="size-4 fill-amber-400 text-amber-400" />
+                  {submission.rating} out of 5
+                </>
+              ) : (
+                <span className="text-slate-400">Not rated</span>
+              )}
+            </dd>
+          </div>
+        )}
       </dl>
 
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">

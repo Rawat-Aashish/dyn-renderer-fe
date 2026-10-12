@@ -74,8 +74,8 @@ function FormDialogBody({ form, cloneOf, onClose }: { form?: Form; cloneOf?: For
     <form onSubmit={handleSubmit} noValidate className="mt-4 space-y-4">
       {cloneOf && (
         <p className="text-sm leading-relaxed text-slate-600">
-          A new draft is made from <strong>{cloneOf.name}</strong>: its description, category, fields, rules and
-          conditions are copied. Versions, submissions and history are not.
+          A new draft is made from <strong>{cloneOf.name}</strong>: its description, category, rating setting, fields,
+          rules and conditions are copied. Versions, submissions and history are not.
         </p>
       )}
       {hasOwnerlessError && <Alert>{messageOf(mutation.error)}</Alert>}

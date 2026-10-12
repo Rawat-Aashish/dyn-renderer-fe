@@ -12,6 +12,8 @@ export interface StoredSession {
   step?: string
   /** Keys of the steps the visitor has reached. */
   reached?: string[]
+  /** The rating was sent or skipped, so a refresh does not ask again. */
+  ratingDone?: boolean
 }
 
 const keyFor = (code: string) => `public_form:${code}`

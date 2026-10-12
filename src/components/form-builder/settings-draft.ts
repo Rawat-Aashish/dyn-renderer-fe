@@ -1,5 +1,6 @@
+import { allowedTypesOf, maxSizeMbOf } from '../../lib/file-formats'
 import { isChoice, isLayout } from '../../lib/component-meta'
-import type { ComponentRequest, ComponentType, FormComponent, Option } from '../../types/form'
+import type { ComponentRequest, ComponentType, FileFormat, FormComponent, Option } from '../../types/form'
 
 /** What the Settings tab edits. Everything is held as simple strings, booleans and lists. */
 export interface SettingsDraft {
@@ -17,6 +18,8 @@ export interface SettingsDraft {
   options: Option[]
   decimalPlaces: number
   collapsible: boolean
+  allowedTypes: FileFormat[]
+  maxSizeMb: number
 }
 
 function isMultiValue(type: ComponentType): boolean {
@@ -44,11 +47,13 @@ export function toDraft(component: FormComponent): SettingsDraft {
     options: (properties.options ?? []).map((option) => ({ ...option })),
     decimalPlaces: properties.decimalPlaces ?? 2,
     collapsible: properties.collapsible ?? false,
+    allowedTypes: allowedTypesOf(properties),
+    maxSizeMb: maxSizeMbOf(properties),
   }
 }
 
 function defaultFromDraft(type: ComponentType, value: SettingsDraft['defaultValue']): unknown {
-  if (isLayout(type)) return undefined
+  if (isLayout(type) || type === 'FILE_UPLOAD') return undefined
   if (isMultiValue(type)) return Array.isArray(value) && value.length > 0 ? value : undefined
   if (typeof value !== 'string' || value === '') return undefined
   if (type === 'TOGGLE') return value === 'true'
@@ -81,6 +86,8 @@ export function toRequest(component: FormComponent, draft: SettingsDraft): Compo
     request.properties = { decimalPlaces: draft.decimalPlaces }
   } else if (type === 'SECTION') {
     request.properties = { collapsible: draft.collapsible }
+  } else if (type === 'FILE_UPLOAD') {
+    request.properties = { allowedTypes: draft.allowedTypes, maxSizeMb: draft.maxSizeMb }
   }
   return request
 }

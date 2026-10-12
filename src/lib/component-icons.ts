@@ -8,6 +8,7 @@ import {
   Heading,
   ListChecks,
   Mail,
+  Paperclip,
   Phone,
   Rows3,
   SquareCheck,
@@ -33,6 +34,7 @@ export const TYPE_ICONS: Record<ComponentType, LucideIcon> = {
   TOGGLE: ToggleLeft,
   DATE: Calendar,
   DATETIME: CalendarClock,
+  FILE_UPLOAD: Paperclip,
   SECTION: Rows3,
   HEADING: Heading,
 }

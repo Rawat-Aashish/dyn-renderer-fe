@@ -14,12 +14,13 @@ export const TYPE_LABELS: Record<ComponentType, string> = {
   TOGGLE: 'Toggle',
   DATE: 'Date',
   DATETIME: 'Date and time',
+  FILE_UPLOAD: 'File upload',
   SECTION: 'Section',
   HEADING: 'Heading',
 }
 
 export const PALETTE_GROUPS: { title: string; types: ComponentType[] }[] = [
-  { title: 'Inputs', types: ['TEXT', 'TEXTAREA', 'NUMBER', 'DECIMAL', 'EMAIL', 'PHONE', 'TOGGLE', 'DATE', 'DATETIME'] },
+  { title: 'Inputs', types: ['TEXT', 'TEXTAREA', 'NUMBER', 'DECIMAL', 'EMAIL', 'PHONE', 'TOGGLE', 'DATE', 'DATETIME', 'FILE_UPLOAD'] },
   { title: 'Choices', types: ['DROPDOWN', 'RADIO', 'CHECKBOX', 'MULTISELECT'] },
   { title: 'Layout', types: ['SECTION', 'HEADING'] },
 ]
@@ -51,6 +52,7 @@ export const RULE_TYPES_BY_COMPONENT: Record<ComponentType, RuleType[]> = {
   CHECKBOX: [],
   MULTISELECT: [],
   TOGGLE: [],
+  FILE_UPLOAD: [],
   SECTION: [],
   HEADING: [],
 }

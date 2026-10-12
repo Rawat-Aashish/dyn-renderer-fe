@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import { ApiError, GENERIC_ERROR } from '../../api/client'
+import { FeedbackThanks, RatingPanel } from '../../components/form-renderer/RatingPanel'
 import { SteppedForm } from '../../components/form-renderer/SteppedForm'
 import { Button } from '../../components/ui/Button'
 import { Alert, Spinner } from '../../components/ui/StateViews'
@@ -10,7 +11,7 @@ import { useFormFiller } from '../../hooks/useFormFiller'
 import { useStepFlow, type StepFlowState } from '../../hooks/useStepFlow'
 import { initialAnswers, type Answers } from '../../lib/form-logic/answers.ts'
 import { clearStored, patchStored, readStored, writeStored, type StoredSession } from '../../lib/public-session'
-import { startSubmission, submitAnswers } from '../../services/public.service'
+import { startSubmission, submitAnswers, submitRating, uploadFile } from '../../services/public.service'
 
 /** A new token is requested only when this tab has nothing stored for the form. */
 async function loadSession(code: string): Promise<StoredSession> {
@@ -49,26 +50,85 @@ function Notice({ title, message, action }: { title: string; message: string; ac
   )
 }
 
-function ThankYou({ name }: { name: string }) {
+/** How long the thank-you is on its own before the rating question takes its place. */
+const RATING_DELAY_MS = 2500
+/** Matches the leave animation in index.css. */
+const SWAP_MS = 350
+
+type Stage = 'thanks' | 'rating' | 'feedback'
+
+/**
+ * Thank you, then (when the form takes ratings) the rating question in the same spot, then a thank-you for the
+ * feedback. Each screen lifts away before the next rises in, so nothing is stacked on top of anything else.
+ */
+function ThankYou({ code, session }: { code: string; session: StoredSession }) {
+  const asksForRating = session.configuration.ratingEnabled === true && session.ratingDone !== true
+  const [stage, setStage] = useState<Stage>('thanks')
+  const [next, setNext] = useState<Stage | null>(null)
+  const [swapped, setSwapped] = useState(false)
+  const [asked, setAsked] = useState(false)
+  const [given, setGiven] = useState(0)
+
+  useEffect(() => {
+    if (!asksForRating || asked || stage !== 'thanks') return
+    const timer = window.setTimeout(() => setNext('rating'), RATING_DELAY_MS)
+    return () => window.clearTimeout(timer)
+  }, [asksForRating, asked, stage])
+
+  useEffect(() => {
+    if (next === null) return
+    const timer = window.setTimeout(() => {
+      setStage(next)
+      setSwapped(true)
+      setNext(null)
+    }, SWAP_MS)
+    return () => window.clearTimeout(timer)
+  }, [next])
+
+  async function sendRating(rating: number) {
+    try {
+      await submitRating(code, session.token, rating)
+    } catch (error) {
+      // Already rated, no ratings taken, or the form closed: there is nothing left to ask, so say thanks.
+      if (!(error instanceof ApiError) || ![404, 409, 410].includes(error.status)) throw error
+    }
+    patchStored(code, { ratingDone: true })
+    setGiven(rating)
+    setNext('feedback')
+  }
+
+  function skip() {
+    patchStored(code, { ratingDone: true })
+    setAsked(true)
+    setNext('thanks')
+  }
+
+  const motion = next !== null ? 'leave-up' : swapped ? 'enter-up' : ''
+
   return (
     <Page centered>
-      <div className="rounded-2xl bg-white p-8 text-center shadow-lg ring-1 ring-slate-200 sm:p-12">
-        <svg viewBox="0 0 52 52" fill="none" aria-hidden="true" className="mx-auto size-24 text-accent-600">
-          <circle className="success-circle" cx="26" cy="26" r="25" stroke="currentColor" strokeWidth="2" />
-          <path
-            className="success-check"
-            d="M14 27l8 8 16-16"
-            stroke="currentColor"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-        <h1 className="mt-6 text-2xl font-semibold tracking-tight text-slate-900">Thank you</h1>
-        <p className="mt-2 text-sm leading-relaxed text-slate-600">
-          Your response to <span className="font-medium text-slate-900">{name}</span> has been recorded.
-        </p>
-      </div>
+      {stage === 'thanks' && (
+        <div className={`rounded-2xl bg-white p-8 text-center shadow-lg ring-1 ring-slate-200 sm:p-12 ${motion}`}>
+          <svg viewBox="0 0 52 52" fill="none" aria-hidden="true" className="mx-auto size-24 text-accent-600">
+            <circle className="success-circle" cx="26" cy="26" r="25" stroke="currentColor" strokeWidth="2" />
+            <path
+              className="success-check"
+              d="M14 27l8 8 16-16"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <h1 className="mt-6 text-2xl font-semibold tracking-tight text-slate-900">Thank you</h1>
+          <p className="mt-2 text-sm leading-relaxed text-slate-600">
+            Your response to <span className="font-medium text-slate-900">{session.configuration.name}</span> has been
+            recorded.
+          </p>
+        </div>
+      )}
+      {stage === 'rating' && <RatingPanel className={motion} onSubmit={sendRating} onSkip={skip} />}
+      {stage === 'feedback' && <FeedbackThanks className={motion} rating={given} />}
     </Page>
   )
 }
@@ -102,6 +162,20 @@ function FormBody({ code, session, onSubmitted, onEnded }: BodyProps) {
   useEffect(() => {
     document.title = configuration.name
   }, [configuration.name])
+
+  async function sendFile(fieldCode: string, file: File) {
+    try {
+      return await uploadFile(code, session.token, fieldCode, file)
+    } catch (error) {
+      // The same session ends as it does on submit; any other refusal is shown by the file field itself.
+      if (error instanceof ApiError && error.status === 404) onEnded('lost')
+      if (error instanceof ApiError && error.status === 410) {
+        clearStored(code)
+        onEnded('closed')
+      }
+      throw error
+    }
+  }
 
   async function handleSubmit() {
     const payload = flow.submit()
@@ -151,6 +225,7 @@ function FormBody({ code, session, onSubmitted, onEnded }: BodyProps) {
         onSubmit={() => void handleSubmit()}
         submitting={submitting}
         notice={general ? <Alert>{general}</Alert> : undefined}
+        uploadFile={sendFile}
       />
     </Page>
   )
@@ -216,7 +291,7 @@ export function PublicFormPage() {
   }
 
   const session = query.data
-  if (submitted || session.submitted) return <ThankYou name={session.configuration.name} />
+  if (submitted || session.submitted) return <ThankYou code={code} session={session} />
 
   return (
     <FormBody

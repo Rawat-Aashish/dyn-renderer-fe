@@ -5,6 +5,7 @@ import { Link, NavLink, Outlet, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ApiError, messageOf } from '../api/client'
 import { FormActionDialogs, type FormAction } from '../components/forms/FormActionDialogs'
+import { RatingToggle } from '../components/forms/RatingToggle'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
@@ -103,6 +104,8 @@ export function FormLayout() {
               <span className="font-mono text-xs text-slate-600">{form.code}</span>
               <Badge tone={info.tone}>{info.label}</Badge>
               {form.category && <Badge tone="blue">{form.category}</Badge>}
+              {!form.archived && <RatingToggle form={form} locked={locked} />}
+              {form.archived && form.ratingEnabled && <Badge tone="slate">Rating on</Badge>}
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
